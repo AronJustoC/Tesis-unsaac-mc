@@ -86,6 +86,7 @@ Para elementos frame 3D:
 
 ### 3.1 Problema de Autovalores
 El sistema homogéneo ($\{F(t)\} = 0$) se reduce a:
+
 $$
 [K]\{\phi\} = \omega^2 [M]\{\phi\}
 $$
@@ -94,18 +95,21 @@ $$
 
 ### 3.2 Solución del Determinante
 Las frecuencias naturales se obtienen resolviendo:
+
 $$
 \det\left([K] - \omega^2 [M]\right) = 0
 $$
 
 ### 3.3 Frecuencias Naturales
 Cada autovalor $\omega_i^2$ corresponde a una frecuencia natural:
+
 $$
 f_i = \frac{\omega_i}{2\pi} \quad \text{(Hz)}
 $$
 
 ### 3.4 Modos de Vibración
 Los autovectores $\{\phi_i\}$ representan la forma modal asociada a $\omega_i$. Se normalizan con:
+
 $$
 \{\phi_i\}^T [M] \{\phi_i\} = 1
 $$
@@ -116,10 +120,12 @@ $$
 
 ### 3.6 Matriz Modal
 Agrupando todos los modos:
+
 $$
 [\Phi] = \begin{bmatrix} \{\phi_1\} & \{\phi_2\} & \cdots & \{\phi_n\} \end{bmatrix}
 $$
 - Diagonaliza $[K]$ y $[M]$:
+
 $$
 [\Phi]^T [K] [\Phi] = [\Omega^2], \quad [\Phi]^T [M] [\Phi] = [I]
 $$
@@ -150,12 +156,14 @@ $$
 
 ### 5.2 Separación Modal
 Para evitar acoplamiento dinámico, se recomienda:
+
 $$
 \frac{f_j}{f_i} > 1.2 \quad \forall i,j \ (i \neq j)
-```
+$$
 
 ### 5.3 Factores de Participación
 Miden la contribución de cada modo a la respuesta global:
+
 $$
 \gamma_i = \frac{\{\phi_i\}^T [M] \{1\}}{\sqrt{\{\phi_i\}^T [M] \{\phi_i\}}}
 $$

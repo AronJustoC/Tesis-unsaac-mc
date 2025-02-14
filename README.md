@@ -52,42 +52,39 @@ k_{local} = \begin{bmatrix}
 ```
 #### Matriz de Transformación de Coordenadas Locales a Globales
 
-Para transformar la matriz de rigidez local a coordenadas globales, se utiliza la matriz de transformación $[T]$, que depende de los ángulos de orientación del elemento estructural. La relación es:
+Para transformar la matriz de rigidez local a coordenadas globales se utiliza la matriz de transformación [T]:
 
 $$
 [K_{global}] = [T]^T [k_{local}] [T]
 $$
 
 Donde:
-- $[T]$: Matriz de transformación que convierte las coordenadas locales del elemento a coordenadas globales.
+- [T]: Matriz que convierte las coordenadas locales del elemento a coordenadas globales.
+- Los cosenos directores ($l_x, m_x, n_x, l_y, m_y, n_y, l_z, m_z, n_z$) definen la orientación del elemento:
+   - $l_x, m_x, n_x$: Proyecciones del eje local x sobre los ejes globales X, Y, Z.
+   - $l_y, m_y, n_y$: Proyecciones del eje local y sobre los ejes globales X, Y, Z.
+   - $l_z, m_z, n_z$: Proyecciones del eje local z sobre los ejes globales X, Y, Z.
 
-La matriz de transformación $[T]$ se construye a partir de los cosenos directores de los ángulos de orientación del elemento en el espacio tridimensional.
-
-Los cosenos directores $l_x, m_x, n_x, l_y, m_y, n_y, l_z, m_z, n_z$ representan las proyecciones de los vectores unitarios locales sobre los ejes globales. Específicamente:
-- $l_x, m_x, n_x$: Cosenos directores del eje local x en relación con los ejes globales X, Y, Z.
-- $l_y, m_y, n_y$: Cosenos directores del eje local y en relación con los ejes globales X, Y, Z.
-- $l_z, m_z, n_z$: Cosenos directores del eje local z en relación con los ejes globales X, Y, Z.
-
-Ejemplo de matriz de transformación para un elemento frame 3D con 12 GDL:
+Ejemplo de matriz de transformación para un elemento frame 3D con 12 grados de libertad:
 
 ```math
 [T] = \begin{bmatrix}
-l_x & m_x & n_x & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-l_y & m_y & n_y & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-l_z & m_z & n_z & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & l_x & m_x & n_x & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & l_y & m_y & n_y & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & l_z & m_z & n_z & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 0 & l_x & m_x & n_x & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 0 & l_y & m_y & n_y & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 0 & l_z & m_z & n_z & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & l_x & m_x & n_x \\
-0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & l_y & m_y & n_y \\
-0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & l_z & m_z & n_z
+l_x & m_x & n_x & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0 \\
+l_y & m_y & n_y & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0 \\
+l_z & m_z & n_z & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0 \\
+0   & 0   & 0   & l_x & m_x & n_x & 0   & 0   & 0   & 0   & 0   & 0 \\
+0   & 0   & 0   & l_y & m_y & n_y & 0   & 0   & 0   & 0   & 0   & 0 \\
+0   & 0   & 0   & l_z & m_z & n_z & 0   & 0   & 0   & 0   & 0   & 0 \\
+0   & 0   & 0   & 0   & 0   & 0   & l_x & m_x & n_x & 0   & 0   & 0 \\
+0   & 0   & 0   & 0   & 0   & 0   & l_y & m_y & n_y & 0   & 0   & 0 \\
+0   & 0   & 0   & 0   & 0   & 0   & l_z & m_z & n_z & 0   & 0   & 0 \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & l_x & m_x & n_x \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & l_y & m_y & n_y \\
+0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & l_z & m_z & n_z
 \end{bmatrix}
 ```
 
-Esta matriz se utiliza para transformar tanto las matrices de rigidez como las de masa de los elementos estructurales.
+Esta matriz se emplea para transformar tanto las matrices de rigidez como las de masa de los elementos estructurales.
 
 ---
 
@@ -117,16 +114,18 @@ Para elementos frame 3D:
 ## 3. ANÁLISIS MODAL AMPLIADO
 
 ### 3.1 Problema de Autovalores
-El sistema homogéneo ($\{F(t)\} = 0$) se reduce a:
+Para el sistema homogéneo ($\{F(t)\} = 0$), la ecuación de movimiento se reduce a:
 
 $$
 [K]\{\phi\} = \omega^2 [M]\{\phi\}
 $$
-- $\omega^2$: Autovalores (cuadrado de las frecuencias angulares).
-- $\{\phi\}$: Autovectores (modos de vibración).
+
+Donde:
+- $\omega^2$ son los autovalores (cuadrado de las frecuencias angulares).
+- $\{\phi\}$ son los autovectores (modos de vibración).
 
 ### 3.2 Solución del Determinante
-Las frecuencias naturales se obtienen resolviendo:
+Las frecuencias naturales se obtienen resolviendo el determinante:
 
 $$
 \det\left([K] - \omega^2 [M]\right) = 0
@@ -140,7 +139,7 @@ f_i = \frac{\omega_i}{2\pi} \quad \text{(Hz)}
 $$
 
 ### 3.4 Modos de Vibración
-Los autovectores $\{\phi_i\}$ representan la forma modal asociada a $\omega_i$. Se normalizan con:
+Los autovectores $\{\phi_i\}$ representan la forma modal asociada a $\omega_i$. Se normalizan de la siguiente manera:
 
 $$
 \{\phi_i\}^T [M] \{\phi_i\} = 1
@@ -151,34 +150,199 @@ $$
 - Ortogonalidad en rigidez: $\{\phi_i\}^T [K] \{\phi_j\} = 0 \quad (i \neq j)$
 
 ### 3.6 Matriz Modal
-Agrupando todos los modos:
+Agrupando todos los modos de vibración en una matriz modal:
 
 $$
 [\Phi] = \begin{bmatrix} \{\phi_1\} & \{\phi_2\} & \cdots & \{\phi_n\} \end{bmatrix}
 $$
-- Diagonaliza $[K]$ y $[M]$:
+
+Esta matriz diagonaliza $[K]$ y $[M]$:
 
 $$
 [\Phi]^T [K] [\Phi] = [\Omega^2], \quad [\Phi]^T [M] [\Phi] = [I]
 $$
 
+### 3.7 Solución Modal
+
+El análisis modal es crucial en la dinámica estructural, permitiendo descomponer el comportamiento vibratorio en modos naturales. A continuación, se describen dos métodos comunes para la solución modal:
+
+1. **Método de Lanczos**:
+   - **Descripción**: Algoritmo iterativo para encontrar autovalores y autovectores de matrices grandes y dispersas.
+   - **Proceso**:
+     - Inicia con un vector de prueba $\{v\}$.
+     - Genera una secuencia de Krylov: $\{v\}, [K]^{-1}[M]\{v\}, ([K]^{-1}[M])^2\{v\}, \ldots$.
+     - Construye una base ortogonal que aproxima los autovectores.
+     - Obtiene autovalores resolviendo un problema reducido en esta base.
+   - **Ventajas**:
+     - Eficiente para matrices dispersas grandes.
+     - Convergencia rápida para los primeros modos de vibración.
+     - Reduce el problema original a uno de menor dimensión.
+
+2. **Normalización**:
+   - **Descripción**: Asegura que los autovectores tengan una magnitud consistente.
+   - **Proceso**:
+     - **Normalización respecto a la masa**: Ajusta cada autovector $\{\phi\}$ para que $\{\phi\}^T[M]\{\phi\} = 1$.
+     - **Factores de participación modal**: Miden la contribución de cada modo a la respuesta global:
+       $$
+       \gamma_i = \frac{\{\phi_i\}^T [M] \{1\}}{\sqrt{\{\phi_i\}^T [M] \{\phi_i\}}}
+       $$
+     - Facilita la comparación entre modos y la interpretación de su importancia relativa.
+
+Estos métodos son esenciales para realizar un análisis modal preciso y eficiente, permitiendo a los ingenieros comprender mejor el comportamiento dinámico de las estructuras.
+
+
 ---
+# Análisis Modal Estructural 3D
 
-## 4. IMPLEMENTACIÓN COMPUTACIONAL
+## Descripción
+Software de análisis modal para estructuras tridimensionales basado en el método de elementos finitos (MEF). Permite realizar análisis dinámico de estructuras considerando elementos tipo viga en 3D con 6 grados de libertad por nodo.
 
-### Pasos Clave:
-1. **Discretización**: Dividir la estructura en elementos finitos.
-2. **Ensamblaje**:
-   - Sumar contribuciones de $[K_{local}]$ y $[M_{local}]$ a las matrices globales.
-3. **Aplicación de Restricciones**:
-   - Eliminar filas/columnas correspondientes a GDL restringidos.
-4. **Solución Modal**:
-   - Métodos: Iteración inversa, Jacobi, Lanczos.
-5. **Postproceso**:
-   - Visualización de modos.
-   - Cálculo de participación modal.
+## Características Principales
+- Análisis modal completo en 3D
+- Elementos tipo viga con 6 GDL por nodo
+- Matrices dispersas para optimización de memoria
+- Visualización 3D de modos de vibración
+- Exportación de resultados en formato pickle
+- Integración temporal mediante método Newmark-β
 
----
+## Requisitos
+```bash
+Python >= 3.8
+numpy >= 1.21.0
+scipy >= 1.7.0
+matplotlib >= 3.4.0
+```
+
+## Instalación
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/usuario/analisis-modal-3d.git
+cd analisis-modal-3d
+```
+
+2. Crear y activar entorno virtual:
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+.\venv\Scripts\activate   # Windows
+```
+
+3. Instalar dependencias:
+```bash
+pip install -r requirements.txt
+```
+
+## Estructura del Proyecto
+```
+analisis-modal-3d/
+├── src/
+│   ├── __init__.py
+│   ├── structures/
+│   │   ├── __init__.py
+│   │   ├── node.py
+│   │   ├── element.py
+│   │   └── structure.py
+│   ├── analysis/
+│   │   ├── __init__.py
+│   │   ├── assembler.py
+│   │   ├── modal.py
+│   │   └── dynamic.py
+│   └── visualization/
+│       ├── __init__.py
+│       └── plotter.py
+├── examples/
+│   ├── simple_beam.py
+│   └── space_frame.py
+├── tests/
+│   └── test_modal.py
+├── docs/
+│   └── theory.pdf
+├── requirements.txt
+└── README.md
+```
+
+## Uso Básico
+
+```python
+from src.structures import Structure, Node, Element
+from src.analysis import modal_analysis, dynamic_response
+from src.visualization import plot_mode_shape
+
+# Crear estructura
+structure = Structure()
+
+# Añadir nodos
+n1 = structure.add_node(0, 0, 0)
+n2 = structure.add_node(0, 0, 3)
+
+# Definir propiedades
+section = {
+    'area': 0.01,
+    'Ix': 8.33e-6,
+    'Iy': 8.33e-6,
+    'Iz': 1.67e-5
+}
+
+material = {
+    'E': 200e9,    # Módulo de Young
+    'G': 76.9e9,   # Módulo de cortante
+    'rho': 7850    # Densidad
+}
+
+# Añadir elemento
+element = structure.add_element(n1, n2, section, material)
+
+# Realizar análisis modal
+frequencies, modes = modal_analysis(structure, num_modes=5)
+
+# Visualizar primer modo
+plot_mode_shape(structure, modes[:, 0])
+```
+
+## Ejemplos Incluidos
+1. `simple_beam.py`: Análisis de una viga en voladizo
+2. `space_frame.py`: Pórtico espacial con múltiples elementos
+
+## Funcionalidades Detalladas
+
+### Análisis Modal
+- Solución del problema de autovalores generalizado
+- Normalización de modos respecto a la masa
+- Cálculo de frecuencias naturales y modos de vibración
+- Método de Lanczos para sistemas grandes
+
+### Análisis Dinámico
+- Integración temporal mediante Newmark-β
+- Superposición modal
+- Respuesta a cargas armónicas
+- Respuesta transitoria
+
+### Visualización
+- Gráficos 3D interactivos
+- Animación de modos de vibración
+- Deformadas modales
+- Exportación de gráficos
+
+## Documentación
+La documentación completa se encuentra en `docs/theory.pdf`, incluyendo:
+- Fundamento teórico
+- Ejemplos detallados
+- Referencia de API
+- Guía de usuario
+
+## Tests
+Ejecutar suite de pruebas:
+```bash
+python -m pytest tests/
+```
+
+## Contribuciones
+1. Fork del repositorio
+2. Crear rama para feature (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abrir Pull Request
+
 
 ## 5. ANÁLISIS DE RESULTADOS
 
@@ -201,5 +365,12 @@ $$
 $$
 
 ---
+## Contacto
+Nombre - email@ejemplo.com
+Project Link: https://github.com/usuario/analisis-modal-3d
 
-**Nota**: Este documento es compatible con renderizadores de ecuaciones como **MathJax** o **KaTeX**.
+## Referencias
+1. Bathe, K.J. (1996). Finite Element Procedures
+2. Cook, R.D. (2001). Concepts and Applications of Finite Element Analysis
+3. Zienkiewicz, O.C. (2000). The Finite Element Method
+

@@ -1,0 +1,29 @@
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# Archivos de configuración del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos CSV
+*.csv
+
+# Archivos JSON
+*.json
+
+# Logs y caché
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos ocultos de WSL/Linux
+.*swp
+.*swo
+
+# Directorios específicos de entornos
+.vscode/
+.idea/
+
+# Ignorar el propio .gitignore (solo si se quiere evitar modificaciones accidentales)
+!.gitignore

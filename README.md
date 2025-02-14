@@ -50,12 +50,44 @@ k_{local} = \begin{bmatrix}
 0 & \frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{2EI_y}{L} & 0 & -\frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{4EI_y}{L}
 \end{bmatrix}
 ```
+#### Matriz de Transformación de Coordenadas Locales a Globales
 
-#### Transformación a Coordenadas Globales
+Para transformar la matriz de rigidez local a coordenadas globales, se utiliza la matriz de transformación $[T]$, que depende de los ángulos de orientación del elemento estructural. La relación es:
+
 $$
 [K_{global}] = [T]^T [k_{local}] [T]
 $$
-- $[T]$: Matriz de transformación (ángulos de orientación del elemento).
+
+Donde:
+- $[T]$: Matriz de transformación que convierte las coordenadas locales del elemento a coordenadas globales.
+
+La matriz de transformación $[T]$ se construye a partir de los cosenos directores de los ángulos de orientación del elemento en el espacio tridimensional.
+
+Los cosenos directores $l_x, m_x, n_x, l_y, m_y, n_y, l_z, m_z, n_z$ representan las proyecciones de los vectores unitarios locales sobre los ejes globales. Específicamente:
+- $l_x, m_x, n_x$: Cosenos directores del eje local x en relación con los ejes globales X, Y, Z.
+- $l_y, m_y, n_y$: Cosenos directores del eje local y en relación con los ejes globales X, Y, Z.
+- $l_z, m_z, n_z$: Cosenos directores del eje local z en relación con los ejes globales X, Y, Z.
+
+Ejemplo de matriz de transformación para un elemento frame 3D con 12 GDL:
+
+```math
+[T] = \begin{bmatrix}
+l_x & m_x & n_x & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+l_y & m_y & n_y & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+l_z & m_z & n_z & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & l_x & m_x & n_x & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & l_y & m_y & n_y & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & l_z & m_z & n_z & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & l_x & m_x & n_x & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & l_y & m_y & n_y & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & l_z & m_z & n_z & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & l_x & m_x & n_x \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & l_y & m_y & n_y \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & l_z & m_z & n_z
+\end{bmatrix}
+```
+
+Esta matriz se utiliza para transformar tanto las matrices de rigidez como las de masa de los elementos estructurales.
 
 ---
 

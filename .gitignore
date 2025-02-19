@@ -51,3 +51,5 @@ htmlcov/
 .cache
 coverage.xml
 *.cover
+
+notas/

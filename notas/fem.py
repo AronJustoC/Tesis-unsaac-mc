@@ -1,25 +1,24 @@
-const math = require('mathjs');
-const fs = require('fs');
+import numpy as np
 
-// Definir propiedades del material y geometría
-const E = 210e9; // Módulo de elasticidad (Pa)
-const G = 80e9;  // Módulo de corte (Pa)
-const A = 0.01;  // Área de la sección transversal (m^2)
-const Iyy = 1e-6; // Momento de inercia en y (m^4)
-const Izz = 1e-6; // Momento de inercia en z (m^4)
-const J = 1e-6;   // Constante torsional (m^4)
+# Definir propiedades del material y geometría
+E = 210e9  # Módulo de elasticidad (Pa)
+G = 80e9   # Módulo de corte (Pa)
+A = 0.01   # Área de la sección transversal (m^2)
+Iyy = 1e-6 # Momento de inercia en y (m^4)
+Izz = 1e-6 # Momento de inercia en z (m^4)
+J = 1e-6   # Constante torsional (m^4)
 
-// Definir coordenadas de los nodos
-const nodos = [
+# Definir coordenadas de los nodos y elementos (mantener los arrays existentes) 
+nodos = np.array([
   [0, 0, 0],
-  [0, 0, 1100],
+  [0, 0, 1100], 
   [0, 0, 2200],
   [762.5, 0, 0],
   [762.5, 0, 2200],
   [1525, 0, 0],
   [1525, 0, 1100],
   [1525, 0, 2200],
-  [2287.5, 0, 0],
+  [2287.5, 0, 0], 
   [2287.5, 0, 2200],
   [3050, 0, 0],
   [3050, 0, 1100],
@@ -173,11 +172,10 @@ const nodos = [
   [20587.5, 5000, 2200],
   [21350, 5000, 0],
   [21350, 5000, 1100]
-];
+])
 
-
-// Definir conectividad de los elementos
-const elementos = [
+# Definir conectividad de los elementos
+elementos = np.array([
   [1, 2],
   [2, 3],
   [1, 4],
@@ -199,6 +197,7 @@ const elementos = [
   [10, 12],
   [10, 13],
   [11, 12],
+  [12, 13],
   [12, 13],
   [11, 14],
   [12, 14],
@@ -532,21 +531,21 @@ const elementos = [
   [81, 71],
   [71, 152],
   [152, 162]
-];
+]);
 
-// Número de nodos y elementos
-const num_nodos = nodos.length;
-const num_elementos = elementos.length;
+#Número de nodos y elementos
+num_nodos = nodos.length;
+num_elementos = elementos.length;
 
-// Grados de libertad por nodo (6 en 3D: 3 traslaciones y 3 rotaciones)
-const gdl_por_nodo = 6;
-const num_gdl = num_nodos * gdl_por_nodo;
+# Grados de libertad por nodo (6 en 3D: 3 traslaciones y 3 rotaciones)
+gdl_por_nodo = 6;
+num_gdl = num_nodos * gdl_por_nodo;
 
-// Inicializar la matriz de rigidez global y el vector de fuerzas
-let K = math.zeros(num_gdl, num_gdl);
-let F = math.zeros(num_gdl, 1);
+# Inicializar la matriz de rigidez global y el vector de fuerzas
+K = np.zeros((num_gdl, num_gdl))
+F = np.zeros(num_gdl)
 
-// Definir fuerzas aplicadas (en Newtons y N·m)
+# Definir fuerzas aplicadas (en Newtons y N·m) 
 F.set([5], -1000); // Momento en el nodo 1, dirección z
 
 // Definir restricciones (1 = fijo, 0 = libre)

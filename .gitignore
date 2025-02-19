@@ -1,29 +1,53 @@
-# Node.js dependencies
-node_modules/
-package-lock.json
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+venv/
+ENV/
+.env
+*.egg-info/
 
-# Archivos de configuración del sistema
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Archivos CSV
-*.csv
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Archivos JSON
-*.json
+# Local development settings
+local_settings.py
 
-# Logs y caché
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Database
+*.sqlite3
+*.db
 
-# Archivos ocultos de WSL/Linux
-.*swp
-.*swo
+# Logs
+*.log
 
-# Directorios específicos de entornos
-.vscode/
-.idea/
-
-# Ignorar el propio .gitignore (solo si se quiere evitar modificaciones accidentales)
-!.gitignore
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover

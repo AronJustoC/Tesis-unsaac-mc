@@ -35,19 +35,20 @@ $$
 Para un elemento estructural en 3D con 12 GDL:
 
 ```math
-k_{local} = \begin{bmatrix}
+k_{local} =
+\begin{bmatrix}
 \frac{EA}{L} & 0 & 0 & 0 & 0 & 0 & -\frac{EA}{L} & 0 & 0 & 0 & 0 & 0 \\
-0 & \frac{12EI_y}{L^3} & 0 & 0 & 0 & \frac{6EI_y}{L^2} & 0 & -\frac{12EI_y}{L^3} & 0 & 0 & 0 & \frac{6EI_y}{L^2} \\
-0 & 0 & \frac{12EI_z}{L^3} & 0 & -\frac{6EI_z}{L^2} & 0 & 0 & 0 & -\frac{12EI_z}{L^3} & 0 & -\frac{6EI_z}{L^2} & 0 \\
+0 & \frac{12EI_z}{L^3} & 0 & 0 & 0 & \frac{6EI_z}{L^2} & 0 & -\frac{12EI_z}{L^3} & 0 & 0 & 0 & \frac{6EI_z}{L^2} \\
+0 & 0 & \frac{12EI_y}{L^3} & 0 & -\frac{6EI_y}{L^2} & 0 & 0 & 0 & -\frac{12EI_y}{L^3} & 0 & -\frac{6EI_y}{L^2} & 0 \\
 0 & 0 & 0 & \frac{GJ}{L} & 0 & 0 & 0 & 0 & 0 & -\frac{GJ}{L} & 0 & 0 \\
-0 & 0 & -\frac{6EI_z}{L^2} & 0 & \frac{4EI_z}{L} & 0 & 0 & 0 & \frac{6EI_z}{L^2} & 0 & \frac{2EI_z}{L} & 0 \\
-0 & \frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{4EI_y}{L} & 0 & -\frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{2EI_y}{L} \\
+0 & 0 & -\frac{6EI_y}{L^2} & 0 & \frac{4EI_y}{L} & 0 & 0 & 0 & \frac{6EI_y}{L^2} & 0 & \frac{2EI_y}{L} & 0 \\
+0 & \frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{4EI_z}{L} & 0 & -\frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{2EI_z}{L} \\
 - \frac{EA}{L} & 0 & 0 & 0 & 0 & 0 & \frac{EA}{L} & 0 & 0 & 0 & 0 & 0 \\
-0 & -\frac{12EI_y}{L^3} & 0 & 0 & 0 & -\frac{6EI_y}{L^2} & 0 & \frac{12EI_y}{L^3} & 0 & 0 & 0 & -\frac{6EI_y}{L^2} \\
-0 & 0 & -\frac{12EI_z}{L^3} & 0 & \frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{12EI_z}{L^3} & 0 & \frac{6EI_z}{L^2} & 0 \\
+0 & -\frac{12EI_z}{L^3} & 0 & 0 & 0 & -\frac{6EI_z}{L^2} & 0 & \frac{12EI_z}{L^3} & 0 & 0 & 0 & -\frac{6EI_z}{L^2} \\
+0 & 0 & -\frac{12EI_y}{L^3} & 0 & \frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{12EI_y}{L^3} & 0 & \frac{6EI_y}{L^2} & 0 \\
 0 & 0 & 0 & -\frac{GJ}{L} & 0 & 0 & 0 & 0 & 0 & \frac{GJ}{L} & 0 & 0 \\
-0 & 0 & -\frac{6EI_z}{L^2} & 0 & \frac{2EI_z}{L} & 0 & 0 & 0 & \frac{6EI_z}{L^2} & 0 & \frac{4EI_z}{L} & 0 \\
-0 & \frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{2EI_y}{L} & 0 & -\frac{6EI_y}{L^2} & 0 & 0 & 0 & \frac{4EI_y}{L}
+0 & 0 & -\frac{6EI_y}{L^2} & 0 & \frac{2EI_y}{L} & 0 & 0 & 0 & \frac{6EI_y}{L^2} & 0 & \frac{4EI_y}{L} & 0 \\
+0 & \frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{2EI_z}{L} & 0 & -\frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{4EI_z}{L}
 \end{bmatrix}
 ```
 #### Matriz de Transformación de Coordenadas Locales a Globales

@@ -53,3 +53,6 @@ coverage.xml
 *.cover
 
 notas/
+
+venv/
+__pycache__/

@@ -10,6 +10,8 @@ class Element:
         self._compute_local_stiffness()
         self._compute_transformation_matrix()
         self._compute_global_stiffness()
+        self._compute_local_mass()
+        self._compute_global_mass()
 
         def _compute_length(self):
             p1 = np.array(self.nodes[0].coords)
@@ -141,3 +143,49 @@ class Element:
 
         def _compute_global_stiffness(self):
             self.k_global = self.T.T @ self.k_local @ self.T
+
+        def _compute_local_mass(self):
+            rho = self.material["rho"]
+            A = self.section["area"]
+            L = self.L
+            Ix = self.section["Ix"]
+
+            factor = rho * A * L / 420
+            rx2 = Ix / A
+
+            # Términos diagonales principales
+            self.m_local[0, 0] = 140
+            self.m_local[1, 1] = 156
+            self.m_local[2, 2] = 156
+            self.m_local[3, 3] = 140 * rx2
+            self.m_local[4, 4] = 4 * L**2
+            self.m_local[5, 5] = 4 * L**2
+
+            # Términos acoplados
+            self.m_local[0, 6] = self.m_local[6, 0] = 70
+            self.m_local[1, 5] = self.m_local[5, 1] = 22 * L
+            self.m_local[1, 7] = self.m_local[7, 1] = 54
+            self.m_local[1, 11] = self.m_local[11, 1] = -13 * L
+            self.m_local[2, 4] = self.m_local[4, 2] = -22 * L
+            self.m_local[2, 8] = self.m_local[8, 2] = 54
+            self.m_local[2, 10] = self.m_local[10, 2] = 13 * L
+            self.m_local[3, 9] = self.m_local[9, 3] = 70 * rx2
+            self.m_local[4, 8] = self.m_local[8, 4] = 13 * L
+            self.m_local[4, 10] = self.m_local[10, 4] = -3 * L**2
+            self.m_local[5, 7] = self.m_local[7, 5] = -13 * L
+            self.m_local[5, 11] = self.m_local[11, 5] = -3 * L**2
+
+            # Bloque inferior derecho
+            self.m_local[6, 6] = 140
+            self.m_local[7, 7] = 156
+            self.m_local[8, 8] = 156
+            self.m_local[9, 9] = 140 * rx2
+            self.m_local[10, 10] = 4 * L**2
+            self.m_local[11, 11] = 4 * L**2
+
+            # Multiplicar por factor escalar
+            self.m_local *= factor
+
+        def _compute_global_mass(self):
+            """Transforma la matriz de masa a coordenadas globales"""
+            self.m_global = self.T.T @ self.m_local @ self.T

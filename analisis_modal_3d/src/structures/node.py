@@ -1,16 +1,11 @@
-from typing import ClassVar, override
-
-
 class Node:
-    _id_counter: ClassVar[int] = 1
+    _id_counter = 0
 
-    def __init__(self, x: float, y: float, z: float) -> None:
-        self.id: int = Node._id_counter
+    def __init__(self, x, y, z):
+        self.id = Node._id_counter
         Node._id_counter += 1
+        self.coords = (x, y, z)
+        self.dofs = [self.id * 6 + i for i in range(6)]  # 6 GDL por nodo
 
-        self.coords: tuple[float, float, float] = (x, y, z)
-        self.dofs: list[int] = [self.id * 6 + i for i in range(6)]
-
-    @override
-    def __repr__(self) -> str:
-        return f"Node(id={self.id}, coords={self.coords})"
+    def __repr__(self):
+        return f"Node {self.id} ({self.coords})"

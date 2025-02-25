@@ -1,5 +1,6 @@
 from src.structures import Structure
 from src.analysis import modal_analysis
+from src.visualization.structure_plotter import plot_structure
 from src.visualization import plot_mode_shape
 import numpy as np
 
@@ -25,6 +26,9 @@ def main():
 
     # Restricciones
     structure.add_constraint(n1, ["ux", "uy", "uz", "rx", "ry", "rz"])
+
+    # Graficar estructura
+    plot_structure(structure)
 
     try:
         constrained_dofs = structure.get_constrained_dofs()

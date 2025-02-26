@@ -1,34 +1,76 @@
 import numpy as np
+from scipy.sparse.linalg import eigsh
+from scipy.sparse import eye as sparse_eye
 from .assembler import assemble_global_matrices
-from scipy.linalg import eigh
 
-def is_positive_definite(matrix):
-    """Verifica si una matriz es definida positiva."""
-    return np.all(np.linalg.eigvals(matrix) > 0)
 
-def modal_analysis(structure, num_modes=5, constrained_dofs=None):
+def modal_analysis(
+    structure,
+    num_modes=5,
+    constrained_dofs=None,
+    solver="lanczos",
+    sigma=1.0,
+    max_iter=1000,
+    tol=1e-8,
+    shift=0.1,
+    regularization=1e-6,
+):
     """
-    Realiza análisis modal expandiendo modos al espacio completo.
+    Análisis modal robusto para grandes sistemas con parámetros avanzados.
+
+    Args:
+        structure: Objeto de la estructura
+        num_modes: Número de modos a calcular
+        constrained_dofs: Grados de libertad restringidos
+        solver: Método de solución ('lanczos', 'shift-invert')
+        sigma: Desplazamiento espectral para métodos iterativos
+        max_iter: Máximo de iteraciones
+        tol: Tolerancia de convergencia
+        shift: Valor de desplazamiento inicial
+        regularization: Factor de regularización para matrices
+
+    Returns:
+        frequencies: Frecuencias naturales (Hz)
+        mode_shapes: Vectores modales
     """
-    # Ensamblar matrices completas
-    K_full, M_full = assemble_global_matrices(structure)
-    
-    # Obtener DOFs libres
-    all_dofs = np.arange(K_full.shape[0])
-    free_dofs = np.setdiff1d(all_dofs, constrained_dofs)
-    
-    # Reducir matrices
-    K_red = K_full[np.ix_(free_dofs, free_dofs)]
-    M_red = M_full[np.ix_(free_dofs, free_dofs)]
-    
-    # Resolver autovalores
-    eigvals, eigvecs_red = eigh(K_red, M_red, subset_by_index=(0, num_modes-1))
-    
-    # Expandir modos al espacio completo
-    mode_shapes = np.zeros((K_full.shape[0], num_modes))
-    mode_shapes[free_dofs, :] = eigvecs_red[:, :num_modes]
-    
-    # Calcular frecuencias
+    # Ensamblar matrices globales con formato disperso
+    K, M = assemble_global_matrices(structure)
+
+    # Aplicar regularización numérica
+    K_reg = K + regularization * sparse_eye(K.shape[0])
+    M_reg = M + regularization * sparse_eye(M.shape[0])
+
+    # Manejar grados de libertad restringidos
+    free_dofs = np.setdiff1d(np.arange(K.shape[0]), constrained_dofs)
+
+    # Extraer submatrices libres
+    K_red = K_reg[free_dofs, :][:, free_dofs]
+    M_red = M_reg[free_dofs, :][:, free_dofs]
+
+    # Configurar parámetros del solver
+    solver_params = {
+        "k": num_modes,
+        "sigma": sigma,
+        "maxiter": max_iter,
+        "tol": tol,
+        "which": "LM",
+        "mode": "buckling" if solver == "shift-invert" else "normal",
+    }
+
+    # Resolver problema de autovalores generalizado
+    try:
+        eigvals, eigvecs_red = eigsh(K_red, M=M_red, **solver_params)
+    except np.linalg.LinAlgError:
+        # Reintentar con desplazamiento diferente si falla
+        solver_params["sigma"] = shift
+        eigvals, eigvecs_red = eigsh(K_red, M=M_red, **solver_params)
+
+    # Expandir vectores modales al espacio completo
+    mode_shapes = np.zeros((K.shape[0], num_modes))
+    mode_shapes[free_dofs, :] = eigvecs_red
+
+    # Calcular frecuencias naturales (Hz)
     frequencies = np.sqrt(np.abs(eigvals)) / (2 * np.pi)
-    
+
     return frequencies, mode_shapes
+

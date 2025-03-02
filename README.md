@@ -34,9 +34,8 @@ $$
 #### Matriz de Rigidez Local (Elemento Frame 3D)
 Para un elemento estructural en 3D con 12 GDL:
 
-```math
-k_{local} =
-\begin{bmatrix}
+$$
+k_{local} = \begin{bmatrix}
 \frac{EA}{L} & 0 & 0 & 0 & 0 & 0 & -\frac{EA}{L} & 0 & 0 & 0 & 0 & 0 \\
 0 & \frac{12EI_z}{L^3} & 0 & 0 & 0 & \frac{6EI_z}{L^2} & 0 & -\frac{12EI_z}{L^3} & 0 & 0 & 0 & \frac{6EI_z}{L^2} \\
 0 & 0 & \frac{12EI_y}{L^3} & 0 & -\frac{6EI_y}{L^2} & 0 & 0 & 0 & -\frac{12EI_y}{L^3} & 0 & -\frac{6EI_y}{L^2} & 0 \\
@@ -50,7 +49,8 @@ k_{local} =
 0 & 0 & -\frac{6EI_y}{L^2} & 0 & \frac{2EI_y}{L} & 0 & 0 & 0 & \frac{6EI_y}{L^2} & 0 & \frac{4EI_y}{L} & 0 \\
 0 & \frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{2EI_z}{L} & 0 & -\frac{6EI_z}{L^2} & 0 & 0 & 0 & \frac{4EI_z}{L}
 \end{bmatrix}
-```
+$$
+
 #### Matriz de Transformación de Coordenadas Locales a Globales
 
 Para transformar la matriz de rigidez local a coordenadas globales se utiliza la matriz de transformación [T]:
@@ -68,7 +68,7 @@ Donde:
 
 Ejemplo de matriz de transformación para un elemento frame 3D con 12 grados de libertad:
 
-```math
+$$
 [T] = \begin{bmatrix}
 l_x & m_x & n_x & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0 \\
 l_y & m_y & n_y & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0 \\
@@ -83,7 +83,7 @@ l_z & m_z & n_z & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0 \\
 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & l_y & m_y & n_y \\
 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   & l_z & m_z & n_z
 \end{bmatrix}
-```
+$$
 
 Esta matriz se emplea para transformar tanto las matrices de rigidez como las de masa de los elementos estructurales.
 
@@ -92,7 +92,7 @@ Esta matriz se emplea para transformar tanto las matrices de rigidez como las de
 ### 2.3 Matriz de Masa Consistente
 Para elementos frame 3D:
 
-```math
+$$
 [M_e] = \frac{\rho A L}{420}
 \begin{bmatrix}
 140 & 0 & 0 & 0 & 0 & 0 & 70 & 0 & 0 & 0 & 0 & 0 \\
@@ -108,7 +108,8 @@ Para elementos frame 3D:
 0 & 0 & 13L & 0 & -3L^2 & 0 & 0 & 0 & -22L & 0 & 4L^2 & 0 \\
 0 & -13L & 0 & 0 & 0 & -3L^2 & 0 & 22L & 0 & 0 & 0 & 4L^2
 \end{bmatrix}
-```
+$$
+
 ---
 
 ## 3. ANÁLISIS MODAL AMPLIADO

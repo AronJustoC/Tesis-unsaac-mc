@@ -184,9 +184,12 @@ El análisis modal es crucial en la dinámica estructural, permitiendo descompon
    - **Proceso**:
      - **Normalización respecto a la masa**: Ajusta cada autovector $\{\phi\}$ para que $\{\phi\}^T[M]\{\phi\} = 1$.
      - **Factores de participación modal**: Miden la contribución de cada modo a la respuesta global:
-       $$
-       \gamma_i = \frac{\{\phi_i\}^T [M] \{1\}}{\sqrt{\{\phi_i\}^T [M] \{\phi_i\}}}
-       $$
+
+ $$
+\gamma_i = \frac{\{\phi_i\}^T [M] \{1\}}{\sqrt{\{\phi_i\}^T [M] \{\phi_i\}}}
+$$
+
+
      - Facilita la comparación entre modos y la interpretación de su importancia relativa.
 
 Estos métodos son esenciales para realizar un análisis modal preciso y eficiente, permitiendo a los ingenieros comprender mejor el comportamiento dinámico de las estructuras.

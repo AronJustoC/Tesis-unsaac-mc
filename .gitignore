@@ -56,3 +56,5 @@ notas/
 
 venv/
 __pycache__/
+# word text files
+~$SIS_Rev.1.docx

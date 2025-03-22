@@ -4,6 +4,8 @@ from src.visualization import plot_mode_shape
 from src.visualization import plot_structure
 import numpy as np
 
+#Para correrlo manualmente
+#PYTHONPATH=/home/aron/Aron/08_TesisUnsaac/02_analisis_modal_3d python3 bailey.py
 
 def main():
     structure = Structure()
@@ -567,11 +569,7 @@ def main():
     # ========== Aplicar restricciones ==========
     constraints = {
         1: ["ux", "uy", "uz"],
-        82: [
-            "ux",
-            "uy",
-            "uz",
-        ],
+        82: ["ux", "uy", "uz"],
         71: ["uy", "uz"],
         152: ["uy", "uz"],
     }

@@ -1,7 +1,8 @@
-from src.structures import Structure
-from src.analysis import modal_analysis
-from src.visualization import plot_mode_shape
 import numpy as np
+import numpy as np
+from analisis_modal_3d.analysis import modal_analysis
+from analisis_modal_3d.structures import Structure
+from analisis_modal_3d.visualization import plot_mode_shape
 
 
 def create_complex_bridge():

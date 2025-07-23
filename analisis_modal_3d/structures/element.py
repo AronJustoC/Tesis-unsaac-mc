@@ -1,7 +1,22 @@
 import numpy as np
 
+
 class Element:
+    """Representa un elemento estructural en 3D (viga).
+
+    Calcula las matrices de rigidez y masa locales y globales para el elemento.
+    """
     def __init__(self, node1, node2, section, material):
+        """Inicializa un nuevo elemento.
+
+        Args:
+            node1 (Node): El primer nodo del elemento.
+            node2 (Node): El segundo nodo del elemento.
+            section (dict): Un diccionario con las propiedades de la sección transversal
+                            (e.g., 'area', 'Iy', 'Iz', 'Ix').
+            material (dict): Un diccionario con las propiedades del material
+                             (e.g., 'E', 'G', 'rho').
+        """
         self.nodes = (node1, node2)
         self.section = section
         self.material = material
@@ -13,11 +28,13 @@ class Element:
         self._compute_global_mass()
 
     def _compute_length(self):
+        """Calcula la longitud del elemento y la almacena en self.L."""
         p1 = np.array(self.nodes[0].coords)
         p2 = np.array(self.nodes[1].coords)
         self.L = np.linalg.norm(p2 - p1)
 
     def _compute_local_stiffness(self):
+        """Calcula la matriz de rigidez local del elemento y la almacena en self.k_local."""
         E = self.material["E"]
         G = self.material["G"]
         A = self.section["area"]
@@ -97,6 +114,7 @@ class Element:
         self.k_local[11, 11] = flex_y_3
 
     def _compute_transformation_matrix(self):
+        """Calcula la matriz de transformación del elemento y la almacena en self.T."""
         # Calculo de cosenos directores
         # Coordenadas de los nodos del elemento
         p1 = np.array(self.nodes[0].coords)
@@ -108,30 +126,28 @@ class Element:
         if L < 1e-10:
             raise ValueError("Elemento tiene longitud cero.")
 
-        # Vector unitario del eje local x (l)
-        l = dx / L
+        # Vector unitario del eje local x
+        unit_vector_x = dx / L
 
         # Vector de referencia para calcular ejes locales y/z
         v_ref = np.array([1.0, 0.0, 0.0])  # Eje global X
 
         # Si el elemento es vertical (paralelo al eje Z)
-        if np.abs(l[2]) > 0.999:
+        if np.abs(unit_vector_x[2]) > 0.999:
             v_ref = np.array([0.0, 1.0, 0.0])  # Usar eje global Y como referencia
 
         # Calcular vector temporal para eje local y
-        m_temp = np.cross(v_ref, l)
-        if (
-            np.linalg.norm(m_temp) < 1e-10
-        ):  # Caso especial para elementos alinieados
+        m_temp = np.cross(v_ref, unit_vector_x)
+        if np.linalg.norm(m_temp) < 1e-10:  # Caso especial para elementos alinieados
             v_ref = np.array([0.0, 0.0, 1.0])  # Usar eje global Z como referencia
-            m_temp = np.cross(v_ref, l)
+            m_temp = np.cross(v_ref, unit_vector_x)
 
         # Normalizar vectores locales
         m = m_temp / np.linalg.norm(m_temp)
-        n = np.cross(l, m)
+        n = np.cross(unit_vector_x, m)
 
         # Matriz de rotacion 3x3
-        R = np.column_stack((l, m, n))
+        R = np.column_stack((unit_vector_x, m, n))
 
         # Inicializa T como una matriz de ceros 12x12
         self.T = np.zeros((12, 12))
@@ -141,9 +157,11 @@ class Element:
             self.T[i : i + 3, i : i + 3] = R
 
     def _compute_global_stiffness(self):
+        """Calcula la matriz de rigidez global del elemento y la almacena en self.k_global."""
         self.k_global = self.T.T @ self.k_local @ self.T
 
     def _compute_local_mass(self):
+        """Calcula la matriz de masa local del elemento y la almacena en self.m_local."""
         rho = self.material["rho"]
         A = self.section["area"]
         L = self.L

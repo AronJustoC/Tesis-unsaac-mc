@@ -1,8 +1,6 @@
-from src.structures import Structure
-from src.analysis import modal_analysis
-from src.visualization import plot_mode_shape
-from src.visualization import plot_structure
-import numpy as np
+from analisis_modal_3d.analysis.modal import modal_analysis
+from analisis_modal_3d.structures.structure import Structure
+from analisis_modal_3d.visualization.plotter import plot_mode_shape, plot_structure
 
 
 def main():

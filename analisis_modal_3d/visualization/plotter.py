@@ -5,7 +5,7 @@ def plot_mode_shape(
     structure,
     mode_vector,
     deformation_scale=100,
-    title="Mode Shape Visualization",
+    title="Visualización de modo",
     filename=None,
 ):
     """
@@ -28,7 +28,7 @@ def plot_mode_shape(
 
     # Crear el plotter con fondo negro y tamaño de ventana adecuado.
     plotter = pv.Plotter(window_size=(1000, 800))
-    plotter.set_background("black")
+    plotter.set_background("white")
 
     # Listas para calcular la caja de límites (bounding box)
     all_x, all_y, all_z = [], [], []
@@ -44,7 +44,7 @@ def plot_mode_shape(
             all_z.append(pt[2])
         # Crear la línea entre nodos (se asume que el elemento es de dos nodos)
         line = pv.Line(pts[0], pts[1])
-        plotter.add_mesh(line, color="white", line_width=2, label="Original")
+        plotter.add_mesh(line, color="gray", line_width=2, label="Original")
 
     # Dibujar la estructura deformada (líneas en color rojo)
     for element in structure.elements:
@@ -63,9 +63,7 @@ def plot_mode_shape(
             all_z.append(pt[2])
         # Crear la línea deformada
         deformed_line = pv.Line(pt1_def, pt2_def)
-        actor = plotter.add_mesh(
-            deformed_line, color="red", line_width=2, label="Deformed"
-        )
+        actor = plotter.add_mesh(deformed_line, color="red", line_width=2, label="Modo")
         try:
             # Intentar aplicar un patrón de línea discontinua (puede requerir versión compatible de VTK)
             actor.GetProperty().SetLineStipplePattern(0xF0F0)
@@ -100,12 +98,10 @@ def plot_mode_shape(
     plotter.add_axes(color="white")
 
     # Agregar leyenda para identificar las líneas originales y deformadas
-    plotter.add_legend(
-        labels=[("Original", "white"), ("Deformed", "red")], bcolor="black"
-    )
+    plotter.add_legend(labels=[("Original", "gray"), ("Modo", "red")], bcolor="white")
 
     # Agregar título en la ventana del plotter
-    plotter.add_text(title, position="upper_edge", color="white", font_size=14)
+    plotter.add_text(title, position="upper_edge", color="black", font_size=15)
 
     # Mostrar o guardar la visualización
     if filename:

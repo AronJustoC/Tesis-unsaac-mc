@@ -121,8 +121,7 @@ def run_example():
     print(f"Valor máximo del desplazamiento: {np.max(harmonic_displacement_history)}")
     print(f"Valor mínimo del desplazamiento: {np.min(harmonic_displacement_history)}")
     print(f"Valor medio del desplazamiento: {np.mean(harmonic_displacement_history)}")
-    print("------------------------------------
-")
+    print("------------------------------------\n")
 
     # 6. Visualización de Resultados
     # -----------------------------------------------------

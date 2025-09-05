@@ -1,5 +1,6 @@
 import pyvista as pv
 import numpy as np
+import time
 
 
 def plot_mode_shape(
@@ -118,14 +119,15 @@ def animate_mode_shape(
     # Configurar la cámara
     plotter.camera_position = "iso"
 
-    # Calculate dynamic deformation scale
-    bounds = original_mesh.bounds
-    diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
-    if diag_length == 0: diag_length = 1.0
-    
-    # Set deformation_scale to be proportional to the structure's size
-    # You might need to adjust the multiplier (e.g., 0.5) based on desired visual effect
-    deformation_scale = diag_length * 0.05 
+    # Calculate dynamic deformation scale only if not provided
+    if deformation_scale is None:
+        bounds = original_mesh.bounds
+        diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
+        if diag_length == 0: diag_length = 1.0
+        
+        # Set deformation_scale to be proportional to the structure's size
+        # You might need to adjust the multiplier (e.g., 0.5) based on desired visual effect
+        deformation_scale = diag_length * 0.05 
 
     # Abrir el archivo GIF
     if filename:
@@ -155,3 +157,7 @@ def animate_mode_shape(
         plotter.remove_actor("deformed")
 
     plotter.close()
+
+def animate_mode_interactive(structure, mode_vector, **kwargs):
+    print("La función 'animate_mode_interactive' ha sido deshabilitada.")
+    pass

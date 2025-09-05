@@ -1,13 +1,21 @@
 import numpy as np
-import numpy as np
 from analisis_modal_3d.analysis import modal_analysis
 from analisis_modal_3d.structures import Structure
-from analisis_modal_3d.visualization import plot_mode_shape
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
+from analisis_modal_3d.visualization.plotter import plot_mode_shape
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
 
+# Global variables to store results
+structure = None
+freqs = None
+modes = None
+harmonic_displacement_history = None # Not used in this example, but kept for consistency
 
-def create_complex_bridge():
-    # Inicializar estructura
-    bridge = Structure()
+def run_example():
+    global structure, freqs, modes, harmonic_displacement_history
+
+    # Inicializar structure
+    structure = Structure()
 
     # ==============================================================================
     # Geometría avanzada del puente
@@ -25,12 +33,12 @@ def create_complex_bridge():
     # Nodos principales del tablero
     deck_nodes = []
     for x in np.linspace(-back_span, main_span, 100):
-        deck_nodes.append(bridge.add_node(x, 0, 0))
+        deck_nodes.append(structure.add_node(x, 0, 0))
 
     # Nodos laterales para rigidez torsional
     for i, n in enumerate(deck_nodes):
-        bridge.add_node(n.x, deck_width / 2, 0)
-        bridge.add_node(n.x, -deck_width / 2, 0)
+        structure.add_node(n.x, deck_width / 2, 0)
+        structure.add_node(n.x, -deck_width / 2, 0)
 
     # ==============================================================================
     # Pilones principales
@@ -42,8 +50,8 @@ def create_complex_bridge():
         y_width = deck_width * (1 - z / tower_height) + 5
         tower_nodes.extend(
             [
-                bridge.add_node(main_span / 2, y_width, z),
-                bridge.add_node(main_span / 2, -y_width, z),
+                structure.add_node(main_span / 2, y_width, z),
+                structure.add_node(main_span / 2, -y_width, z),
             ]
         )
 
@@ -55,8 +63,8 @@ def create_complex_bridge():
         x_pos = main_span * (i + 1) / (n_cables + 1)
         cable_anchors.extend(
             [
-                bridge.add_node(x_pos, deck_width / 2, 0),
-                bridge.add_node(x_pos, -deck_width / 2, 0),
+                structure.add_node(x_pos, deck_width / 2, 0),
+                structure.add_node(x_pos, -deck_width / 2, 0),
             ]
         )
 
@@ -112,7 +120,7 @@ def create_complex_bridge():
     # ==============================================================================
     # Elementos del tablero (sección cajón multicelular)
     for i in range(len(deck_nodes) - 1):
-        bridge.add_element(
+        structure.add_element(
             deck_nodes[i],
             deck_nodes[i + 1],
             sections["deck"],
@@ -121,7 +129,7 @@ def create_complex_bridge():
 
     # Elementos de los pilones (acero de alta resistencia)
     for i in range(len(tower_nodes) - 1):
-        bridge.add_element(
+        structure.add_element(
             tower_nodes[i],
             tower_nodes[i + 1],
             sections["tower"],
@@ -131,7 +139,7 @@ def create_complex_bridge():
     # Tirantes (elementos de cable pretensado)
     for i in range(n_cables):
         top_node = tower_nodes[-2 if i % 2 == 0 else -1]  # Alternar entre torres
-        bridge.add_element(
+        structure.add_element(
             cable_anchors[2 * i],
             top_node,
             sections["cable"],
@@ -143,22 +151,24 @@ def create_complex_bridge():
     # Restricciones y condiciones de apoyo
     # ==============================================================================
     # Apoyos del tablero
-    bridge.add_constraint(deck_nodes[0], ["uy", "uz", "rx", "ry", "rz"])  # Fijo
-    bridge.add_constraint(deck_nodes[-1], ["uz", "rx", "ry", "rz"])  # Móvil
+    structure.add_constraint(deck_nodes[0], ["uy", "uz", "rx", "ry", "rz"])  # Fijo
+    structure.add_constraint(deck_nodes[-1], ["uz", "rx", "ry", "rz"])  # Móvil
 
     # Base de los pilones
     for node in tower_nodes[:4]:
-        bridge.add_constraint(node, ["ux", "uy", "uz", "rx", "ry", "rz"])
+        structure.add_constraint(node, ["ux", "uy", "uz", "rx", "ry", "rz"])
+
+    # Plot the structure with info
+    plot_structure_with_info(structure, title="Estructura de Puente Atirantado")
 
     # ==============================================================================
     # Análisis modal
     # ==============================================================================
     try:
-        constrained_dofs = bridge.get_constrained_dofs()
+        K_global, M_global = assemble_global_matrices(structure)
         freqs, modes = modal_analysis(
-            bridge,
+            K_global, M_global, structure,
             num_modes=10,
-            constrained_dofs=constrained_dofs,
             mass_matrix_type="consistent",
             solver_options={"max_iter": 1000, "tolerance": 1e-8},
         )
@@ -170,17 +180,17 @@ def create_complex_bridge():
             print(f"Modo {i}: {freq:.2f} Hz")
 
         # Visualización 3D
-        plot_mode_shape(
-            bridge,
-            modes[:, 0],
-            title=f"Modo Fundamental - {freqs[0]:.2f} Hz",
-            deformation_scale=50,
-            view_angle=("isometric"),
-        )
+        for i in range(min(len(freqs), 3)): # Plot first 3 modes for brevity
+            plot_mode_shape(
+                structure,
+                modes[:, i],
+                title=f"Modo {i+1} - {freqs[i]:.2f} Hz",
+                deformation_scale=50,
+                view_angle=("isometric"),
+            )
 
     except Exception as e:
         print(f"Error en el análisis: {e}")
 
-
-if __name__ == "__main__":
-    create_complex_bridge()
+# Call run_example directly when the module is imported
+run_example()

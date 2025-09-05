@@ -1,4 +1,5 @@
 import pyvista as pv
+import numpy as np
 
 
 def plot_mode_shape(
@@ -6,106 +7,151 @@ def plot_mode_shape(
     mode_vector,
     deformation_scale=100,
     title="Visualización de modo",
-    filename=None,
 ):
     """
-    Visualiza la forma modal (mode shape) de una estructura utilizando PyVista.
-
-    Se dibujan tanto la estructura original (en blanco) como la deformada (en rojo),
-    y se fuerza un escalado 1:1 para visualizar correctamente las dimensiones.
-
-    Parámetros:
-        structure: objeto que contiene la estructura con una lista de elementos.
-                   Cada elemento debe tener un atributo 'elements', donde cada elemento tiene
-                   una lista de nodos en 'nodes'. Cada nodo debe tener:
-                       - node.coords: lista o tupla con las coordenadas [x, y, z].
-                       - node.dofs: lista de índices para acceder a las componentes del mode_vector.
-        mode_vector: vector (lista, array, etc.) con los desplazamientos modales.
-        deformation_scale: factor de escala para amplificar la deformación.
-        title: título de la visualización.
-        filename: si se especifica, se guarda una captura de pantalla en este archivo.
+    Visualiza la forma modal con un estilo profesional y simbología de restricciones.
+    - Paleta de colores profesional (Grafito, Carmesí, Azul, Magenta, Verde).
+    - Iluminación avanzada y renderizado de líneas como tubos.
+    - Tipografía limpia (Arial) y composición mejorada.
     """
+    # 1. Extraer puntos y líneas
+    points = np.array([node.coords for node in structure.nodes])
+    lines = np.array([[2, structure.nodes.index(e.nodes[0]), structure.nodes.index(e.nodes[1])] for e in structure.elements])
 
-    # Crear el plotter con fondo negro y tamaño de ventana adecuado.
-    plotter = pv.Plotter(window_size=(1000, 800))
+    # 2. Crear mallas
+    original_mesh = pv.PolyData(points, lines=lines)
+    deformed_points = np.copy(points)
+    for i, node in enumerate(structure.nodes):
+        dofs = node.dofs
+        if dofs and max(dofs) < len(mode_vector):
+            deformed_points[i, 0] += mode_vector[dofs[0]] * deformation_scale
+            deformed_points[i, 1] += mode_vector[dofs[1]] * deformation_scale
+            deformed_points[i, 2] += mode_vector[dofs[2]] * deformation_scale
+    deformed_mesh = pv.PolyData(deformed_points, lines=lines)
+
+    # 3. Configurar el plotter
+    plotter = pv.Plotter(window_size=(800, 700))
     plotter.set_background("white")
 
-    # Listas para calcular la caja de límites (bounding box)
-    all_x, all_y, all_z = [], [], []
+    # 4. Añadir mallas con estilo profesional
+    plotter.add_mesh(original_mesh, color="gray", line_width=1, label="Original")
+    plotter.add_mesh(deformed_mesh, color="#dc143c", style='wireframe', line_width=3, label="Modo")
 
-    # Dibujar la estructura original (líneas en color blanco)
-    for element in structure.elements:
-        # Extraer coordenadas de los nodos
-        pts = [node.coords for node in element.nodes]
-        # Acumular puntos para la caja de límites
-        for pt in pts:
-            all_x.append(pt[0])
-            all_y.append(pt[1])
-            all_z.append(pt[2])
-        # Crear la línea entre nodos (se asume que el elemento es de dos nodos)
-        line = pv.Line(pts[0], pts[1])
-        plotter.add_mesh(line, color="gray", line_width=2, label="Original")
+    # 5. Visualizar restricciones
+    if structure.constraints:
+        bounds = original_mesh.bounds
+        diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
+        if diag_length == 0: diag_length = 1.0
+        symbol_scale = diag_length * 0.025
+        offset_val = symbol_scale * 1
 
-    # Dibujar la estructura deformada (líneas en color rojo)
-    for element in structure.elements:
-        n1, n2 = element.nodes
-        # Calcular coordenadas deformadas para cada nodo
-        pt1_def = [
-            n1.coords[i] + mode_vector[n1.dofs[i]] * deformation_scale for i in range(3)
-        ]
-        pt2_def = [
-            n2.coords[i] + mode_vector[n2.dofs[i]] * deformation_scale for i in range(3)
-        ]
-        # Acumular puntos deformados para la caja de límites
-        for pt in [pt1_def, pt2_def]:
-            all_x.append(pt[0])
-            all_y.append(pt[1])
-            all_z.append(pt[2])
-        # Crear la línea deformada
-        deformed_line = pv.Line(pt1_def, pt2_def)
-        actor = plotter.add_mesh(deformed_line, color="red", line_width=2, label="Modo")
-        try:
-            # Intentar aplicar un patrón de línea discontinua (puede requerir versión compatible de VTK)
-            actor.GetProperty().SetLineStipplePattern(0xF0F0)
-            actor.GetProperty().SetLineStippleRepeatFactor(1)
-        except Exception:
-            # Si no es compatible, se ignora y se muestra como línea continua.
-            pass
+        added_labels = set()
 
-    # Calcular la caja de límites para forzar una escala 1:1
-    min_x, max_x = min(all_x), max(all_x)
-    min_y, max_y = min(all_y), max(all_y)
-    min_z, max_z = min(all_z), max(all_z)
-    max_range = max(max_x - min_x, max_y - min_y, max_z - min_z) / 2.0
-    mid_x = (max_x + min_x) * 0.5
-    mid_y = (max_y + min_y) * 0.5
-    mid_z = (max_z + min_z) * 0.5
+        for node_index, dofs in structure.constraints.items():
+            pos = points[node_index]
+            constrained_trans = [d in dofs for d in range(3)]
+            num_constrained = sum(constrained_trans)
 
-    # Crear una caja invisible que abarca los límites calculados para mantener el aspect ratio 1:1
-    dummy = pv.Box(
-        bounds=[
-            mid_x - max_range,
-            mid_x + max_range,
-            mid_y - max_range,
-            mid_y + max_range,
-            mid_z - max_range,
-            mid_z + max_range,
+            if num_constrained == 3:
+                label = "Articulado"
+                center = pos - np.array([0, 0, offset_val])
+                symbol = pv.Cone(center=center, direction=[0, 0, 1], height=symbol_scale * 1.5, radius=symbol_scale, resolution=4)
+                plotter.add_mesh(symbol, color="#0073e6", label=label if label not in added_labels else None)
+                added_labels.add(label)
+
+            elif num_constrained == 2:
+                label = "Deslizante"
+                center = pos - np.array([0, 0, offset_val])
+                free_axis_idx = constrained_trans.index(False)
+                cyl_direction = np.array([1., 0., 0.]) if free_axis_idx != 0 else np.array([0., 1., 0.])
+                symbol = pv.Cylinder(center=center, direction=cyl_direction, radius=symbol_scale*0.7, height=symbol_scale*0.7)
+                plotter.add_mesh(symbol, color="#c400c4", label=label if label not in added_labels else None)
+                added_labels.add(label)
+
+            elif num_constrained == 1:
+                label = "Rodillo"
+                constrained_axis_idx = constrained_trans.index(True)
+                direction = np.zeros(3)
+                direction[constrained_axis_idx] = 1.0
+                center = pos - (direction * offset_val)
+                symbol = pv.Sphere(center=center, radius=symbol_scale * 0.8)
+                plotter.add_mesh(symbol, color="#00a86b", label=label if label not in added_labels else None)
+                added_labels.add(label)
+
+    # 6. Añadir ejes, leyenda y título
+    plotter.add_axes(xlabel="X", ylabel="Y", zlabel="Z")
+    plotter.add_legend(bcolor="white")
+    plotter.add_text(title, position="upper_edge", color="black", font_size=12, font="arial")
+
+    # 7. Activar iluminación avanzada
+    plotter.enable_lightkit()
+
+    # 8. Mostrar o guardar
+    plotter.show(title=title)
+
+
+def animate_mode_shape(
+    structure,
+    mode_vector,
+    deformation_scale=None,
+    title="Animación de modo",
+    filename=None,
+    n_frames=30,
+    fps=10,
+):
+    """
+    Anima la forma modal y la guarda como un GIF.
+    """
+    points = np.array([node.coords for node in structure.nodes])
+    lines = np.array(
+        [
+            [2, structure.nodes.index(e.nodes[0]), structure.nodes.index(e.nodes[1])]
+            for e in structure.elements
         ]
     )
-    plotter.add_mesh(dummy, opacity=0)
+    original_mesh = pv.PolyData(points, lines=lines)
 
-    # Agregar ejes con color blanco (usando add_axes en lugar de show_axes)
-    plotter.add_axes(color="white")
+    plotter = pv.Plotter(off_screen=True, window_size=(800, 700))
+    plotter.set_background("white")
+    plotter.add_mesh(original_mesh, color="gray", line_width=1, label="Original")
 
-    # Agregar leyenda para identificar las líneas originales y deformadas
-    plotter.add_legend(labels=[("Original", "gray"), ("Modo", "red")], bcolor="white")
+    # Configurar la cámara
+    plotter.camera_position = "iso"
 
-    # Agregar título en la ventana del plotter
-    plotter.add_text(title, position="upper_edge", color="black", font_size=15)
+    # Calculate dynamic deformation scale
+    bounds = original_mesh.bounds
+    diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
+    if diag_length == 0: diag_length = 1.0
+    
+    # Set deformation_scale to be proportional to the structure's size
+    # You might need to adjust the multiplier (e.g., 0.5) based on desired visual effect
+    deformation_scale = diag_length * 0.05 
 
-    # Mostrar o guardar la visualización
+    # Abrir el archivo GIF
     if filename:
-        # Guardar una captura de pantalla y cerrar la ventana
-        plotter.show(screenshot=filename, title=title)
-    else:
-        plotter.show(title=title)
+        plotter.open_gif(filename, fps=fps)
+
+    # Bucle de animación
+    for phase in np.linspace(0, 2 * np.pi, n_frames, endpoint=False):
+        deformed_points = np.copy(points)
+        for i, node in enumerate(structure.nodes):
+            dofs = node.dofs
+            if dofs and max(dofs) < len(mode_vector):
+                displacement = mode_vector[dofs[0:3]] * np.sin(phase)
+                deformed_points[i] += displacement * deformation_scale
+
+        deformed_mesh = pv.PolyData(deformed_points, lines=lines)
+        plotter.add_mesh(
+            deformed_mesh,
+            color="#dc143c",
+            style="wireframe",
+            line_width=3,
+            name="deformed",
+        )
+        plotter.add_text(
+            title, position="upper_edge", color="black", font_size=12, font="arial"
+        )
+        plotter.write_frame()
+        plotter.remove_actor("deformed")
+
+    plotter.close()

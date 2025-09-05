@@ -1,8 +1,2 @@
-# Visualizar los modos
-for i in range(len(freqs)):
-    plot_mode_shape(
-        structure,
-        modes[:, i],
-        title=f"Modo {i + 1} - {freqs[i]:.2f} Hz",
-        deformation_scale=100,
-    )
+import os
+from analisis_modal_3d.visualization.plotter import animate_mode_shape

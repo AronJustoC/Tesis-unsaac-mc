@@ -39,4 +39,12 @@ def assemble_global_matrices(structure: Structure):
                 K[dof_i, dof_j] += k_global[i, j]
                 M[dof_i, dof_j] += m_global[i, j]
 
+    # Agregar masas nodales a la matriz de masa global
+    for node in structure.nodes:
+        if node.mass > 0:
+            # Añadir masa a los grados de libertad de traslación (ux, uy, uz)
+            for i in range(3):
+                dof_index = node.dofs[i]
+                M[dof_index, dof_index] += node.mass
+
     return K, M  # Matrices completas (sin eliminar restricciones)

@@ -1,16 +1,22 @@
+import os
+import sys
+import multiprocessing
+
 from analisis_modal_3d.analysis.modal import modal_analysis
 from analisis_modal_3d.structures.structure import Structure
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
 from analisis_modal_3d.visualization.plotter import plot_mode_shape
-from analisis_modal_3d.visualization.structure_plotter import plot_structure
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
 
-# Para correrlo manualmente
-# [00] source /home/aron/Aron/08_TesisUnsaac/venv/bin/activate
-# [00] source /home/aron/Aron/08_TesisUnsaac/venv/bin/activate.fish
-# [01] cd /home/aron/Aron/08_TesisUnsaac/02_analisis_modal_3d/src/examples
-# [02] PYTHONPATH=/home/aron/Aron/08_TesisUnsaac/02_analisis_modal_3d python3 baileyEscalado.py
-# [02]  env PYTHONPATH=/home/aron/Aron/08_TesisUnsaac/02_analisis_modal_3d venv/bin/python3 02_analisis_modal_3d/src/examples/baileyEscalado.py
+# Global variables to store results
+structure = None
+freqs = None
+modes = None
+harmonic_displacement_history = None # Not used in this example, but kept for consistency
 
-def main():
+def run_example():
+    global structure, freqs, modes, harmonic_displacement_history
+
     structure = Structure()
 
     # ========== Definir propiedades de materiales ==========
@@ -18,16 +24,16 @@ def main():
         "ASTM-A36": {
             "E": 200e9,  # Módulo de elasticidad (Pa)
             "G": 77e9,  # Módulo de corte (Pa)
-            "rho": 7850,  # Densidad (kg/m³)
+            "rho": 7950 #7850,  # Densidad (kg/m³)
         },
         "ASTM-A36+": {
             "E": 200e9,  # Módulo de elasticidad (Pa)
             "G": 77e9,  # Módulo de corte (Pa)
-            "rho": 7850 * 6,  # Densidad (kg/m³)
+            "rho": 7850# * 7.13,  # Densidad (kg/m³)
         },
     }
 
-    # ========== Definir propiedades de secciones escla real ==========
+    # ========== Definir propiedades de secciones escala real ==========
     sections = {
         "80x40": {
             "area": (0.008 * 0.004),  # 32 mm²
@@ -225,6 +231,19 @@ def main():
         node_id = row[0]
         coords = (row[1] / 1000, row[2] / 1000, row[3] / 1000)  # Conversión mm -> m
         node_coords[node_id] = structure.add_node(*coords)
+
+    # Asignación de masa puntual a nodos específicos
+    mass_nodes_ids = [31, 36, 41, 112, 117, 122]
+    total_mass = 10.0
+    mass_per_node = total_mass / len(mass_nodes_ids)
+
+    for node_id in mass_nodes_ids:
+        if node_id in node_coords:
+            node = node_coords[node_id]
+            node.mass += mass_per_node
+            print(f"Añadida masa de {mass_per_node:.4f} kg al nodo {node.id}")
+        else:
+            print(f"Advertencia: Nodo con ID {node_id} no encontrado en la estructura.")
 
     # ========== Agregar elementos ==========
     elements = [
@@ -577,69 +596,80 @@ def main():
     # ========== Aplicar restricciones ==========
     constraints = {
         # Apoyos
-        1: ["ux", "uy", "uz", "rx", "rz"],
+        #1: ["ux", "uy", "uz", "rx", "rz"],
+        #82: ["ux", "uy", "uz", "rx", "rz"],
+          1: ["ux", "uy", "uz", "rx", "rz"],
         82: ["ux", "uy", "uz", "rx", "rz"],
-        71: ["uy", "uz", "rx", "rz"],
-        152: ["uy", "uz", "rx", "rz"],
-        #nodos con pasadores (Bloque A)
-        11: ["rx", "rz"],
-        13: ["rx", "rz"],
-        21: ["rx", "rz"],
-        23: ["rx", "rz"],
-        31: ["rx", "rz"],
-        33: ["rx", "rz"],
-        41: ["rx", "rz"],
-        43: ["rx", "rz"],
-        51: ["rx", "rz"],
-        53: ["rx", "rz"],
-        61: ["rx", "rz"],
-        63: ["rx", "rz"],
-       #nodos con pasadores (Bloque B)
-        92: ["rx", "rz"],
-        94: ["rx", "rz"],
-        102: ["rx", "rz"],
-        104: ["rx", "rz"],
-        112: ["rx", "rz"],
-        114: ["rx", "rz"],
-        122: ["rx", "rz"],
-        124: ["rx", "rz"],
-        132: ["rx", "rz"],
-        134: ["rx", "rz"],
-        142: ["rx", "rz"],
-        144: ["rx", "rz"],
+        71: ["uy", "uz"],
+        152: ["uy","uz"],
           }
 
     for node_id, dofs in constraints.items():
         structure.add_constraint(node_coords[node_id], dofs)
-    # Graficar estructura
-    plot_structure(structure)
+
+
+    # Plot the structure with info
+    plot_structure_with_info(structure, title="Estructura Bailey Escalado con Pasadores")
 
     # ========== Análisis Modal con parámetros robustos ==========
     try:
-        constrained_dofs = structure.get_constrained_dofs()
+        K, M = assemble_global_matrices(structure)
         # Usar shift-invert para evitar matrices singulares
         freqs, modes = modal_analysis(
+            K,
+            M,
             structure,
-            num_modes=10,
-            constrained_dofs=constrained_dofs,
+            num_modes=30,
         )
         print("\nFrequencias Naturales:")
-        print("-" * 30)
+        print("-" * 15)
         for i, freq in enumerate(freqs, 1):
             print(f"Mode {i}: {freq:.2f} Hz")
 
-        # Visualizar los modos
-        for i in range(len(freqs)):
-            plot_mode_shape(
-                structure,
-                modes[:, i],
-                title=f"Modo {i + 1} - {freqs[i]:.2f} Hz",
-                deformation_scale=0.3,
+        # Preguntar al usuario cuántos modos visualizar
+        while True:
+            try:
+                num_modes_to_plot_str = input(f"\nIngrese el número de modos a visualizar (1-{len(freqs)}) o 't' para todos: ")
+                if num_modes_to_plot_str.lower() == 't':
+                    num_modes_to_plot = len(freqs)
+                    break
+                num_modes_to_plot = int(num_modes_to_plot_str)
+                if 1 <= num_modes_to_plot <= len(freqs):
+                    break
+                else:
+                    print("Número de modos inválido. Intente de nuevo.")
+            except ValueError:
+                print("Entrada inválida. Por favor, ingrese un número o 't'.")
+
+        # Preguntar por el factor de escala de deformación
+        while True:
+            try:
+                deformation_scale = float(input("Ingrese el factor de escala de deformación (e.g., 0.1): "))
+                break
+            except ValueError:
+                print("Entrada inválida. Por favor, ingrese un número decimal.")
+
+        # --- Visualización de Modos en Procesos Separados ---
+        plot_processes = []
+        print("\nLanzando ventanas de visualización de modos. Cierre cada ventana para continuar.")
+
+        for i in range(num_modes_to_plot):
+            title = f"Modo {i + 1} - {freqs[i]:.2f} Hz"
+            # Crear un proceso para cada ventana de ploteo
+            plot_process = multiprocessing.Process(
+                target=plot_mode_shape,
+                args=(structure, modes[:, i]),
+                kwargs={"title": title, "deformation_scale": deformation_scale}
             )
+            plot_processes.append(plot_process)
+            plot_process.start()
+
+        # Esperar a que todos los procesos de ploteo terminen (ventanas cerradas)
+        for p in plot_processes:
+            p.join()
 
     except Exception as e:
         print(f"Error en el análisis: {str(e)}")
 
-
-if __name__ == "__main__":
-    main()
+# Call run_example directly when the module is imported
+run_example()

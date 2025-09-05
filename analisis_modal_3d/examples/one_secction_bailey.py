@@ -1,9 +1,18 @@
 from analisis_modal_3d.analysis.modal import modal_analysis
 from analisis_modal_3d.structures.structure import Structure
-from analisis_modal_3d.visualization.plotter import plot_mode_shape, plot_structure
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
+from analisis_modal_3d.visualization.plotter import plot_mode_shape
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
 
+# Global variables to store results
+structure = None
+freqs = None
+modes = None
+harmonic_displacement_history = None # Not used in this example, but kept for consistency
 
-def main():
+def run_example():
+    global structure, freqs, modes, harmonic_displacement_history
+
     structure = Structure()
 
     # ========== Definir propiedades de materiales ==========
@@ -12,34 +21,39 @@ def main():
             "E": 200e9,  # Módulo de elasticidad (Pa)
             "G": 77e9,  # Módulo de corte (Pa)
             "rho": 7850,  # Densidad (kg/m³)
-        }
+        },
+        "ASTM-A36+": {
+            "E": 200e9,  # Módulo de elasticidad (Pa)
+            "G": 77e9,  # Módulo de corte (Pa)
+            "rho": 7850 * 6,  # Densidad (kg/m³)
+        },
     }
 
-    # ========== Definir propiedades de secciones ==========
+    # ========== Definir propiedades de secciones escla real ==========
     sections = {
         "80x40": {
-            "area": 0.08 * 0.04,  # 3200 mm²
-            "Ix": 2133333.34e-12,  # Torsion constant
-            "Iy": 426666.67e-12,  # Moment of inertia about y-axis
-            "Iz": 1706666.67e-12,  # Moment of inertia about z-axis
+            "area": (0.008 * 0.004),  # 32 mm²
+            "Ix": 2133333.34e-12 / 10000,  # Torsion constant
+            "Iy": 426666.67e-12 / 10000,  # Moment of inertia about y-axis
+            "Iz": 1706666.67e-12 / 10000,  # Moment of inertia about z-axis
         },
         "100x80": {
-            "area": 0.10 * 0.08,  # 8000 mm²
-            "Ix": 10933333.34e-12,  # Torsion constant
-            "Iy": 6666666.67e-12,  # Moment of inertia about y-axis
-            "Iz": 4266666.67e-12,  # Moment of inertia about z-axis
+            "area": (0.010 * 0.008),  # 80 mm²
+            "Ix": 10933333.34e-12 / 10000,  # Torsion constant
+            "Iy": 6666666.67e-12 / 10000,  # Moment of inertia about y-axis
+            "Iz": 4266666.67e-12 / 10000,  # Moment of inertia about z-axis
         },
         "80x80": {
-            "area": 0.08 * 0.08,  # 6400 mm²
-            "Ix": 6826666.66e-12,  # Torsion constant
-            "Iy": 3413333.33e-12,  # Moment of inertia about y-axis
-            "Iz": 3413333.33e-12,  # Moment of inertia about z-axis
+            "area": (0.008 * 0.008),  # 64 mm²
+            "Ix": 6826666.66e-12 / 10000,  # Torsion constant
+            "Iy": 3413333.33e-12 / 10000,  # Moment of inertia about y-axis
+            "Iz": 3413333.33e-12 / 10000,  # Moment of inertia about z-axis
         },
         "H420x180": {  # H-section
-            "area": 0.42 * 0.02 + 2 * 0.18 * 0.02,  # Web + 2 Flanges
-            "Ix": 399386666.66e-12,  # Torsion constant
-            "Iy": 379693333.33e-12,  # Major axis moment of inertia
-            "Iz": 19693333.33e-12,  # Minor axis moment of inertia
+            "area": (0.042 * 0.002 + 2 * 0.018 * 0.002),  # Web + 2 Flanges
+            "Ix": 399386666.66e-12 / 10000,  # Torsion constant
+            "Iy": 379693333.33e-12 / 10000,  # Major axis moment of inertia
+            "Iz": 19693333.33e-12 / 10000,  # Minor axis moment of inertia
         },
     }
 
@@ -48,35 +62,167 @@ def main():
     for row in [
         # ID: (x, y, z) en metros (convertidos de mm)
         (1, 0, 0, 0),
-        (2, 0, 0, 1100),
-        (3, 0, 0, 2200),
-        (4, 762.5, 0, 0),
-        (5, 762.5, 0, 2200),
-        (6, 1525, 0, 0),
-        (7, 1525, 0, 1100),
-        (8, 1525, 0, 2200),
-        (9, 2287.5, 0, 0),
-        (10, 2287.5, 0, 2200),
-        (11, 3050, 0, 0),
-        (12, 3050, 0, 1100),
-        (13, 3050, 0, 2200),
-        (14, 0, -700, 0),  # (74, 0, -700, 0),
-        (15, 3050, -700, 0),  # (75, 3050, -700, 0),
-        (16, 0, 5000, 0),  # (82, 0, 5000, 0),
-        (17, 0, 5000, 1100),  # (83, 0, 5000, 1100),
-        (18, 0, 5000, 2200),  # (84, 0, 5000, 2200),
-        (19, 762.5, 5000, 0),  # (85, 762.5, 5000, 0),
-        (20, 762.5, 5000, 2200),  # (86, 762.5, 5000, 2200),
-        (21, 1525, 5000, 0),  # (87, 1525, 5000, 0),
-        (22, 1525, 5000, 1100),  # (88, 1525, 5000, 1100),
-        (23, 1525, 5000, 2200),  # (89, 1525, 5000, 2200),
-        (24, 2287.5, 5000, 0),  # (90, 2287.5, 5000, 0),
-        (25, 2287.5, 5000, 2200),  # (91, 2287.5, 5000, 2200),
-        (26, 3050, 5000, 0),  # (92, 3050, 5000, 0),
-        (27, 3050, 5000, 1100),  # (93, 3050, 5000, 1100),
-        (28, 3050, 5000, 2200),  # (94, 3050, 5000, 2200),
-        (29, 0, 5700, 0),  # (155, 0, 5700, 0),
-        (30, 3050, 5700, 0),  # (156, 3050, 5700, 0),
+        (2, 0, 0, 110),
+        (3, 0, 0, 220),
+        (4, 76.25, 0, 0),
+        (5, 76.25, 0, 220),
+        (6, 152.5, 0, 0),
+        (7, 152.5, 0, 110),
+        (8, 152.5, 0, 220),
+        (9, 228.75, 0, 0),
+        (10, 228.75, 0, 220),
+        (11, 305, 0, 0),
+        (12, 305, 0, 110),
+        (13, 305, 0, 220),
+        (14, 381.25, 0, 0),
+        (15, 381.25, 0, 220),
+        (16, 457.5, 0, 0),
+        (17, 457.5, 0, 110),
+        (18, 457.5, 0, 220),
+        (19, 533.75, 0, 0),
+        (20, 533.75, 0, 220),
+        (21, 610, 0, 0),
+        (22, 610, 0, 110),
+        (23, 610, 0, 220),
+        (24, 686.25, 0, 0),
+        (25, 686.25, 0, 220),
+        (26, 762.5, 0, 0),
+        (27, 762.5, 0, 110),
+        (28, 762.5, 0, 220),
+        (29, 838.75, 0, 0),
+        (30, 838.75, 0, 220),
+        (31, 915, 0, 0),
+        (32, 915, 0, 110),
+        (33, 915, 0, 220),
+        (34, 991.25, 0, 0),
+        (35, 991.25, 0, 220),
+        (36, 1067.5, 0, 0),
+        (37, 1067.5, 0, 110),
+        (38, 1067.5, 0, 220),
+        (39, 1143.75, 0, 0),
+        (40, 1143.75, 0, 220),
+        (41, 1220, 0, 0),
+        (42, 1220, 0, 110),
+        (43, 1220, 0, 220),
+        (44, 1296.25, 0, 0),
+        (45, 1296.25, 0, 220),
+        (46, 1372.5, 0, 0),
+        (47, 1372.5, 0, 110),
+        (48, 1372.5, 0, 220),
+        (49, 1448.75, 0, 0),
+        (50, 1448.75, 0, 220),
+        (51, 1525, 0, 0),
+        (52, 1525, 0, 110),
+        (53, 1525, 0, 220),
+        (54, 1601.25, 0, 0),
+        (55, 1601.25, 0, 220),
+        (56, 1677.5, 0, 0),
+        (57, 1677.5, 0, 110),
+        (58, 1677.5, 0, 220),
+        (59, 1753.75, 0, 0),
+        (60, 1753.75, 0, 220),
+        (61, 1830, 0, 0),
+        (62, 1830, 0, 110),
+        (63, 1830, 0, 220),
+        (64, 1906.25, 0, 0),
+        (65, 1906.25, 0, 220),
+        (66, 1982.5, 0, 0),
+        (67, 1982.5, 0, 110),
+        (68, 1982.5, 0, 220),
+        (69, 2058.75, 0, 0),
+        (70, 2058.75, 0, 220),
+        (71, 2135, 0, 0),
+        (72, 2135, 0, 110),
+        (73, 2135, 0, 220),
+        (74, 0, -70, 0),
+        (75, 305, -70, 0),
+        (76, 610, -70, 0),
+        (77, 915, -70, 0),
+        (78, 1220, -70, 0),
+        (79, 1525, -70, 0),
+        (80, 1830, -70, 0),
+        (81, 2135, -70, 0),
+        (82, 0, 500, 0),
+        (83, 0, 500, 110),
+        (84, 0, 500, 220),
+        (85, 76.25, 500, 0),
+        (86, 76.25, 500, 220),
+        (87, 152.5, 500, 0),
+        (88, 152.5, 500, 110),
+        (89, 152.5, 500, 220),
+        (90, 228.75, 500, 0),
+        (91, 228.75, 500, 220),
+        (92, 305, 500, 0),
+        (93, 305, 500, 110),
+        (94, 305, 500, 220),
+        (95, 381.25, 500, 0),
+        (96, 381.25, 500, 220),
+        (97, 457.5, 500, 0),
+        (98, 457.5, 500, 110),
+        (99, 457.5, 500, 220),
+        (100, 533.75, 500, 0),
+        (101, 533.75, 500, 220),
+        (102, 610, 500, 0),
+        (103, 610, 500, 110),
+        (104, 610, 500, 220),
+        (105, 686.25, 500, 0),
+        (106, 686.25, 500, 220),
+        (107, 762.5, 500, 0),
+        (108, 762.5, 500, 110),
+        (109, 762.5, 500, 220),
+        (110, 838.75, 500, 0),
+        (111, 838.75, 500, 220),
+        (112, 915, 500, 0),
+        (113, 915, 500, 110),
+        (114, 915, 500, 220),
+        (115, 991.25, 500, 0),
+        (116, 991.25, 500, 220),
+        (117, 1067.5, 500, 0),
+        (118, 1067.5, 500, 110),
+        (119, 1067.5, 500, 220),
+        (120, 1143.75, 500, 0),
+        (121, 1143.75, 500, 220),
+        (122, 1220, 500, 0),
+        (123, 1220, 500, 110),
+        (124, 1220, 500, 220),
+        (125, 1296.25, 500, 0),
+        (126, 1296.25, 500, 220),
+        (127, 1372.5, 500, 0),
+        (128, 1372.5, 500, 110),
+        (129, 1372.5, 500, 220),
+        (130, 1448.75, 500, 0),
+        (131, 1448.75, 500, 220),
+        (132, 1525, 500, 0),
+        (133, 1525, 500, 110),
+        (134, 1525, 500, 220),
+        (135, 1601.25, 500, 0),
+        (136, 1601.25, 500, 220),
+        (137, 1677.5, 500, 0),
+        (138, 1677.5, 500, 110),
+        (139, 1677.5, 500, 220),
+        (140, 1753.75, 500, 0),
+        (141, 1753.75, 500, 220),
+        (142, 1830, 500, 0),
+        (143, 1830, 500, 110),
+        (144, 1830, 500, 220),
+        (145, 1906.25, 500, 0),
+        (146, 1906.25, 500, 220),
+        (147, 1982.5, 500, 0),
+        (148, 1982.5, 500, 110),
+        (149, 1982.5, 500, 220),
+        (150, 2058.75, 500, 0),
+        (151, 2058.75, 500, 220),
+        (152, 2135, 500, 0),
+        (153, 2135, 500, 110),
+        (154, 2135, 500, 220),
+        (155, 0, 570, 0),
+        (156, 305, 570, 0),
+        (157, 610, 570, 0),
+        (158, 915, 570, 0),
+        (159, 1220, 570, 0),
+        (160, 1525, 570, 0),
+        (161, 1830, 570, 0),
+        (162, 2135, 570, 0),
     ]:
         node_id = row[0]
         coords = (row[1] / 1000, row[2] / 1000, row[3] / 1000)  # Conversión mm -> m
@@ -185,25 +331,23 @@ def main():
 
     for node_id, dofs in constraints.items():
         structure.add_constraint(node_coords[node_id], dofs)
-    # Graficar estructura
-    plot_structure(structure)
+
+    # Plot the structure with info
+    plot_structure_with_info(structure, title="Estructura de una Sección Bailey")
 
     # ========== Análisis Modal con parámetros robustos ==========
     try:
-        constrained_dofs = structure.get_constrained_dofs()
-        # Usar shift-invert para evitar matrices singulares
+        K_global, M_global = assemble_global_matrices(structure)
         freqs, modes = modal_analysis(
-            structure,
-            num_modes=10,
-            constrained_dofs=constrained_dofs,
+            K_global, M_global, structure, num_modes=10
         )
-        print("\nNatural Frequencies:")
+        print("\nFrequencias Naturales:")
         print("-" * 30)
         for i, freq in enumerate(freqs, 1):
             print(f"Mode {i}: {freq:.2f} Hz")
 
         # Visualizar los modos
-        for i in range(len(freqs)):
+        for i in range(min(len(freqs), 3)): # Plot first 3 modes for brevity
             plot_mode_shape(
                 structure,
                 modes[:, i],
@@ -214,6 +358,5 @@ def main():
     except Exception as e:
         print(f"Error en el análisis: {str(e)}")
 
-
-if __name__ == "__main__":
-    main()
+# Call run_example directly when the module is imported
+run_example()

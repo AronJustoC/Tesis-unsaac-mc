@@ -80,17 +80,63 @@ La lógica principal de la aplicación en `02_analisis_modal_3d` es la
 siguiente:
 
 1. **Definir una Estructura**: El usuario define una estructura utilizando
-    las clases del directorio `structures`. Esto implica la creación de
-    objetos `Node` y `Element` y su combinación en un objeto `Structure`.
-    Los ejemplos del directorio `examples` muestran cómo se hace.
+   las clases del directorio `structures`. Esto implica la creación de
+   objetos `Node` y `Element` y su combinación en un objeto `Structure`.
+   Los ejemplos del directorio `examples` muestran cómo se hace.
 2. **Ensamblar Matrices**: El módulo `assembler.py` toma el objeto
-    `Structure` y ensambla las matrices globales de rigidez y masa.
+   `Structure` y ensambla las matrices globales de rigidez y masa.
 3. **Realizar Análisis Modal**: El módulo `modal.py` utiliza las matrices
-    ensambladas para resolver el problema de valores propios, obteniendo las
-    frecuencias naturales y los modos de vibración de la estructura.
+   ensambladas para resolver el problema de valores propios, obteniendo las
+   frecuencias naturales y los modos de vibración de la estructura.
 4. **Visualizar Resultados**: Los módulos de `visualization` se utilizan para
-    graficar la estructura original y sus modos de vibración.
+   graficar la estructura original y sus modos de vibración.
 
 Al trabajar en este proyecto, preste atención a la separación de
 responsabilidades entre los paquetes `structures`, `analysis` y
 `visualization`.
+
+## Análisis de Vibración Forzada (Masa Desbalanceada)
+
+Para simular el comportamiento de la estructura ante un motor con masa
+desbalanceada, se requiere implementar un análisis de vibración forzada.
+Dado que el análisis modal ya está implementado, el método más eficiente
+es la **Superposición Modal**.
+
+### Características y Módulos Necesarios
+
+1. **Definición de la Fuerza de Excitación:**
+
+    - Modelar la fuerza generada por la masa desbalanceada como una función
+      del tiempo (amplitud, frecuencia, punto de aplicación, dirección).
+    - Posiblemente una nueva clase o función en `analysis/`.
+
+2. **Matriz de Amortiguamiento (`C`):**
+
+    - Implementar la creación de la matriz de amortiguamiento global.
+    - Se puede considerar el amortiguamiento de Rayleigh (`C = αM + βK`)
+      o un amortiguamiento modal.
+    - Ubicación sugerida: `analysis/damping.py` o extensión de `assembler.py`.
+
+3. **Solución Dinámica (Superposición Modal):**
+
+    - Un nuevo módulo que tome como entrada las matrices `M`, `K`, `C`,
+      las frecuencias y formas modales (del análisis modal), y la fuerza
+      de excitación `F(t)`.
+    - Resolver las ecuaciones de movimiento desacopladas para obtener la
+      respuesta de la estructura en el dominio del tiempo (`u(t)`).
+    - Ubicación sugerida: `analysis/forced_vibration.py`.
+
+4. **Visualización de la Respuesta en el Tiempo:**
+
+    - Funciones para graficar los desplazamientos, velocidades o
+      aceleraciones de nodos específicos en función del tiempo.
+    - Ubicación sugerida: `visualization/time_response_plotter.py` o extensión de `plotter.py`.
+
+5. **Animación de la Vibración Forzada:**
+    - Capacidad para animar la deformación de la estructura a lo largo del
+      tiempo bajo la acción de la fuerza forzada.
+    - Ubicación sugerida: Extensión de `mode_plotter.py` o `plotter.py`
+      para incluir animación temporal.
+
+Estos pasos permitirán extender la funcionalidad del programa para realizar
+análisis dinámicos más complejos y relevantes para aplicaciones de ingeniería.

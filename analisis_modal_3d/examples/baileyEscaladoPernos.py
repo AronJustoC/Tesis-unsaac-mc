@@ -1,16 +1,18 @@
 from analisis_modal_3d.analysis.modal import modal_analysis
 from analisis_modal_3d.structures.structure import Structure
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
 from analisis_modal_3d.visualization.plotter import plot_mode_shape
-from analisis_modal_3d.visualization.structure_plotter import plot_structure
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
 
-# Para correrlo manualmente
-# [00] source /home/aron/Aron/08_TesisUnsaac/venv/bin/activate
-# [00] source /home/aron/Aron/08_TesisUnsaac/venv/bin/activate.fish
-# [01] cd /home/aron/Aron/08_TesisUnsaac/02_analisis_modal_3d/src/examples
-# [02] PYTHONPATH=/home/aron/Aron/08_TesisUnsaac/02_analisis_modal_3d python3 baileyEscalado.py
+# Global variables to store results
+structure = None
+freqs = None
+modes = None
+harmonic_displacement_history = None # Not used in this example, but kept for consistency
 
+def run_example():
+    global structure, freqs, modes, harmonic_displacement_history
 
-def main():
     structure = Structure()
 
     # ========== Definir propiedades de materiales ==========
@@ -269,8 +271,8 @@ def main():
         (19, 22, "80x40", "ASTM-A36"),
         (20, 22, "80x40", "ASTM-A36"),
         (20, 23, "100x80", "ASTM-A36"),
-        (21, 22, "80x80", "ASTM-A36"),
-        (22, 23, "80x80", "ASTM-A36"),
+        (21, 22, "80x40", "ASTM-A36"),
+        (22, 23, "80x40", "ASTM-A36"),
         (21, 24, "100x80", "ASTM-A36"),
         (22, 24, "80x40", "ASTM-A36"),
         (22, 25, "80x40", "ASTM-A36"),
@@ -581,21 +583,45 @@ def main():
         82: ["ux", "uy", "uz", "rx", "rz"],
         71: ["uy", "uz", "rx", "rz"],
         152: ["uy", "uz", "rx", "rz"],
-    }
+        #nodos con pernos (Bloque A)
+        11: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        13: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        21: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        23: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        31: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        33: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        41: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        43: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        51: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        53: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        61: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        63: ["ux", "uy", "uz", "rx", "ry", "rz"],
+       #nodos con pernos (Bloque B)
+        92: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        94: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        102: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        104: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        112: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        114: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        122: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        124: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        132: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        134: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        142: ["ux", "uy", "uz", "rx", "ry", "rz"],
+        144: ["ux", "uy", "uz", "rx", "ry", "rz"],
+          }
 
     for node_id, dofs in constraints.items():
         structure.add_constraint(node_coords[node_id], dofs)
-    # Graficar estructura
-    plot_structure(structure)
+
+    # Plot the structure with info
+    plot_structure_with_info(structure, title="Estructura Bailey Escalado con Pernos")
 
     # ========== Análisis Modal con parámetros robustos ==========
     try:
-        constrained_dofs = structure.get_constrained_dofs()
-        # Usar shift-invert para evitar matrices singulares
+        K_global, M_global = assemble_global_matrices(structure)
         freqs, modes = modal_analysis(
-            structure,
-            num_modes=10,
-            constrained_dofs=constrained_dofs,
+            K_global, M_global, structure, num_modes=10
         )
         print("\nFrequencias Naturales:")
         print("-" * 30)
@@ -603,7 +629,7 @@ def main():
             print(f"Mode {i}: {freq:.2f} Hz")
 
         # Visualizar los modos
-        for i in range(len(freqs)):
+        for i in range(min(len(freqs), 3)): # Plot first 3 modes for brevity
             plot_mode_shape(
                 structure,
                 modes[:, i],
@@ -614,6 +640,5 @@ def main():
     except Exception as e:
         print(f"Error en el análisis: {str(e)}")
 
-
-if __name__ == "__main__":
-    main()
+# Call run_example directly when the module is imported
+run_example()

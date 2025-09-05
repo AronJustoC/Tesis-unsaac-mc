@@ -1,64 +1,18 @@
-import matplotlib.pyplot as plt
-from analisis_modal_3d.analysis import modal_analysis
-from analisis_modal_3d.structures import Structure
-from analisis_modal_3d.visualization import plot_mode_shape
+from analisis_modal_3d.analysis.modal import modal_analysis
+from analisis_modal_3d.structures.structure import Structure
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
+import multiprocessing
+from analisis_modal_3d.visualization.plotter import plot_mode_shape
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
 
+# Global variables to store results
+structure = None
+freqs = None
+modes = None
+harmonic_displacement_history = None
 
-def plot_structure(structure):
-    """Genera una figura de la estructura con numeración y fondo negro."""
-    fig = plt.figure(facecolor="black")
-    ax = fig.add_subplot(111, projection="3d", facecolor="black")
-
-    # Configurar colores y estilo
-    ax.set_xlabel("X", color="white")
-    ax.set_ylabel("Y", color="white")
-    ax.set_zlabel("Z", color="white")
-    ax.tick_params(colors="white")
-    ax.xaxis.pane.fill = False
-    ax.yaxis.pane.fill = False
-    ax.zaxis.pane.fill = False
-    ax.grid(True, color="gray", alpha=0.3)
-
-    # Dibujar elementos
-    for i, element in enumerate(structure.elements):
-        x = [node.coords[0] for node in element.nodes]
-        y = [node.coords[1] for node in element.nodes]
-        z = [node.coords[2] for node in element.nodes]
-        ax.plot(x, y, z, "cyan", linewidth=2)
-        # Añadir número de elemento en el centro
-        mid_x = sum(x) / 2
-        mid_y = sum(y) / 2
-        mid_z = sum(z) / 2
-        ax.text(mid_x, mid_y, mid_z, f"E{i+1}", color="yellow", fontsize=8)
-
-    # Dibujar nodos
-    for i, node in enumerate(structure.nodes):
-        ax.scatter(
-            node.coords[0],
-            node.coords[1],
-            node.coords[2],
-            color="red",
-            s=100,
-            marker="o",
-        )
-        ax.text(
-            node.coords[0],
-            node.coords[1],
-            node.coords[2],
-            f"N{i+1}",
-            color="white",
-            fontsize=10,
-        )
-
-    plt.title("Estructura 3D", color="white", pad=20)
-    fig.tight_layout()
-    plt.show()
-
-
-def main():
-    # Configurar backend interactivo (opcional)
-    # import matplotlib
-    # matplotlib.use('TkAgg')  # Descomentar para visualización local
+def run_example():
+    global structure, freqs, modes, harmonic_displacement_history
 
     structure = Structure()
 
@@ -96,13 +50,13 @@ def main():
     structure.add_constraint(n4, ["ux", "uy", "uz", "rx", "ry", "rz"])
     structure.add_constraint(n6, ["ux", "uy", "uz", "rx", "ry", "rz"])
 
-    # Graficar estructura
-    plot_structure(structure)
+    # Plot the structure with info
+    plot_structure_with_info(structure, title="Estructura de Viga Simple")
 
     try:
-        constrained_dofs = structure.get_constrained_dofs()
+        K_global, M_global = assemble_global_matrices(structure)
         freqs, modes = modal_analysis(
-            structure, num_modes=5, constrained_dofs=constrained_dofs
+            K_global, M_global, structure, num_modes=5
         )
 
         print("\nNatural Frequencies:")
@@ -110,19 +64,27 @@ def main():
         for i, freq in enumerate(freqs, 1):
             print(f"Mode {i}: {freq:.2f} Hz")
 
-        # Graficar y guardar modos
-        for i in range(5):
-            plot_mode_shape(
-                structure,
-                modes[:, i],
-                title=f"Mode {i+1} - {freqs[i]:.2f} Hz",
-                filename=f"mode_shape_{i+1}.png",
-                scale_factor=50,
+        # --- Visualización de Modos en Procesos Separados ---
+        plot_processes = []
+        print("\nLanzando ventanas de visualización de modos. Cierre cada ventana para continuar.")
+
+        for i in range(min(len(freqs), 3)): # Plot first 3 modes for brevity
+            title = f"Modo {i+1} - {freqs[i]:.2f} Hz"
+            # Crear un proceso para cada ventana de ploteo
+            plot_process = multiprocessing.Process(
+                target=plot_mode_shape,
+                args=(structure, modes[:, i]),
+                kwargs={"title": title, "deformation_scale": 50}
             )
+            plot_processes.append(plot_process)
+            plot_process.start()
+
+        # Esperar a que todos los procesos de ploteo terminen (ventanas cerradas)
+        for p in plot_processes:
+            p.join()
 
     except Exception as e:
         print(f"Error: {str(e)}")
 
-
-if __name__ == "__main__":
-    main()
+# Call run_example directly when the module is imported
+run_example()

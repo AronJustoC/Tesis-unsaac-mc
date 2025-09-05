@@ -26,9 +26,10 @@ class Structure:
             Node: El objeto Node recién creado.
         """
         node = Node(x, y, z)
-        node.id = len(self.nodes)  # Assign node ID
+        node.id = len(self.nodes)  # Asignar ID de nodo
+        node.dofs = [node.id * 6 + i for i in range(6)]  # Asignar DOFs
         self.nodes.append(node)
-        self.num_dofs += 6  # 3 translations + 3 rotations
+        self.num_dofs += 6  # 3 traslaciones + 3 rotaciones
         return node
 
     def add_element(self, node1, node2, section, material):
@@ -107,4 +108,4 @@ class Structure:
             for local_dof in local_dofs:
                 global_dof = self.get_global_dof_index(node_index, local_dof)
                 constrained_dofs.append(global_dof)
-        return sorted(constrained_dofs)
+        return sorted(list(set(constrained_dofs)))

@@ -1,99 +1,63 @@
 import numpy as np
-from scipy.sparse import eye as sparse_eye
-from scipy.sparse.linalg import eigsh
-
-from analisis_modal_3d.analysis.assembler import assemble_global_matrices
+from scipy.linalg import eigh
 
 
 def modal_analysis(
-    structure,
-    num_modes=5,
-    constrained_dofs=None,
-    solver="lanczos",
-    sigma=1.0,
-    max_iter=1000,
-    tol=1e-8,
-    shift=0.1,
-    regularization=1e-6,
+    K: np.ndarray,
+    M: np.ndarray,
+    structure: "Structure",
+    num_modes=6,
 ):
-    """Realiza un análisis modal para determinar las frecuencias naturales y las formas modales de una estructura.
+    """Realiza un análisis modal usando un solucionador de valores propios denso.
 
-    Esta función ensambla las matrices de rigidez y masa globales, aplica
-    restricciones de grados de libertad y resuelve el problema de valores
-    propios generalizado para obtener las frecuencias y modos de vibración.
+    Este método es robusto y calcula todos los modos posibles, devolviendo los
+    primeros `num_modes`.
 
     Args:
-        structure (Structure): El objeto Structure que contiene los nodos y
-                               elementos de la estructura.
-        num_modes (int, optional): El número de modos de vibración a calcular.
-                                   Por defecto es 5.
-        constrained_dofs (list[int] or None, optional): Una lista de índices de
-                                                        grados de libertad que
-                                                        están restringidos (fijos).
-                                                        Si es None, no se aplican
-                                                        restricciones.
-                                                        Por defecto es None.
-        solver (str, optional): El método de solución a utilizar para el problema
-                                de valores propios. Puede ser 'lanczos' o
-                                'shift-invert'. Por defecto es 'lanczos'.
-        sigma (float, optional): El desplazamiento espectral para métodos iterativos.
-                                 Por defecto es 1.0.
-        max_iter (int, optional): El número máximo de iteraciones para el solver.
-                                  Por defecto es 1000.
-        tol (float, optional): La tolerancia de convergencia para el solver.
-                               Por defecto es 1e-8.
-        shift (float, optional): Un valor de desplazamiento inicial utilizado en
-                                 caso de que el solver falle con el sigma inicial.
-                                 Por defecto es 0.1.
-        regularization (float, optional): Un factor de regularización aplicado a
-                                          las matrices de rigidez y masa para
-                                          mejorar la estabilidad numérica.
-                                          Por defecto es 1e-6.
+        K (np.ndarray): Matriz de rigidez global.
+        M (np.ndarray): Matriz de masa global.
+        structure (Structure): El objeto Structure para obtener las restricciones.
+        num_modes (int): Número de modos a calcular.
 
     Returns:
-        tuple[np.ndarray, np.ndarray]: Una tupla que contiene:
-            - frequencies (np.ndarray): Un array de las frecuencias naturales
-                                        de la estructura en Hz.
-            - mode_shapes (np.ndarray): Una matriz donde cada columna representa
-                                        una forma modal (vector propio).
+        tuple[np.ndarray, np.ndarray]: Tupla con las frecuencias (Hz) y las formas modales.
     """
-    # Ensamblar matrices globales con formato disperso
-    K, M = assemble_global_matrices(structure)
-
-    # Aplicar regularización numérica
-    K_reg = K + regularization * sparse_eye(K.shape[0])
-    M_reg = M + regularization * sparse_eye(M.shape[0])
-
-    # Manejar grados de libertad restringidos
+    # Obtener los grados de libertad restringidos
+    constrained_dofs = structure.get_constrained_dofs()
     free_dofs = np.setdiff1d(np.arange(K.shape[0]), constrained_dofs)
 
-    # Extraer submatrices libres
-    K_red = K_reg[free_dofs, :][:, free_dofs]
-    M_red = M_reg[free_dofs, :][:, free_dofs]
-
-    # Configurar parámetros del solver
-    solver_params = {
-        "k": num_modes,
-        "sigma": sigma,
-        "maxiter": max_iter,
-        "tol": tol,
-        "which": "LM",
-        "mode": "buckling" if solver == "shift-invert" else "normal",
-    }
-
-    # Resolver problema de autovalores generalizado
+    # Extraer submatrices para los grados de libertad libres
+    # y convertirlas a formato denso para el solucionador eigh.
     try:
-        eigvals, eigvecs_red = eigsh(K_red, M=M_red, **solver_params)
-    except np.linalg.LinAlgError:
-        # Reintentar con desplazamiento diferente si falla
-        solver_params["sigma"] = shift
-        eigvals, eigvecs_red = eigsh(K_red, M=M_red, **solver_params)
+        K_red_dense = K[free_dofs, :][:, free_dofs].toarray()
+        M_red_dense = M[free_dofs, :][:, free_dofs].toarray()
+    except AttributeError:
+        # Las matrices ya son densas
+        K_red_dense = K[free_dofs, :][:, free_dofs]
+        M_red_dense = M[free_dofs, :][:, free_dofs]
 
-    # Expandir vectores modales al espacio completo
+    # Resolver el problema de valores propios generalizado: K*v = w^2*M*v
+    # eigh es para matrices hermitianas y devuelve los valores propios en orden ascendente.
+    # Se añade una pequeña cantidad a la diagonal de la matriz de masa para asegurar que sea positiva definida.
+    M_red_dense += np.eye(M_red_dense.shape[0]) * 1e-6
+    eigvals, eigvecs_red = eigh(K_red_dense, M_red_dense)
+
+    # Tomar el número de modos solicitado (los más bajos)
+    eigvals = eigvals[:num_modes]
+    eigvecs_red = eigvecs_red[:, :num_modes]
+
+    # Reconstruir los vectores propios en el tamaño original de la estructura
     mode_shapes = np.zeros((K.shape[0], num_modes))
     mode_shapes[free_dofs, :] = eigvecs_red
 
-    # Calcular frecuencias naturales (Hz)
-    frequencies = np.sqrt(np.abs(eigvals)) / (2 * np.pi)
+    # Normalizar los modos (opcional, pero buena práctica)
+    for i in range(num_modes):
+        norm = np.linalg.norm(mode_shapes[:, i])
+        if norm > 1e-9:
+            mode_shapes[:, i] /= norm
+
+    # Calcular frecuencias en Hz desde los valores propios (w^2)
+    # Se manejan valores propios negativos pequeños que pueden surgir de errores numéricos
+    frequencies = np.sqrt(np.maximum(eigvals, 0)) / (2 * np.pi)
 
     return frequencies, mode_shapes

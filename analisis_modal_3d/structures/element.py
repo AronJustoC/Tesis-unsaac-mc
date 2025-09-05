@@ -43,171 +43,93 @@ class Element:
         J = self.section["Ix"]
         L = self.L
 
-        self.k_local = np.zeros((12, 12))
-
         # Parametros para la escritura dela matriz
         axial = E * A / L
-        flex_y_1 = 12 * E * Iz / L**3
-        flex_y_2 = 12 * E * Iy / L**3
         torsion = G * J / L
+        
+        # Terminos de flexion en el plano XY (flexion alrededor de Z)
+        flex_xy_1 = 12 * E * Iz / L**3
+        flex_xy_2 = 6 * E * Iz / L**2
+        flex_xy_3 = 4 * E * Iz / L
+        flex_xy_4 = 2 * E * Iz / L
 
-        # Terminos de flexion
-        rot_y_1 = 6 * E * Iz / L**2
-        rot_z_1 = 6 * E * Iy / L**2
-
-        # Rotaciones
-        flex_y_3 = 4 * E * Iy / L
-        flex_y_4 = 2 * E * Iy / L
-        flex_z_1 = 4 * E * Iz / L
-        flex_z_2 = 2 * E * Iz / L
+        # Terminos de flexion en el plano XZ (flexion alrededor de Y)
+        flex_xz_1 = 12 * E * Iy / L**3
+        flex_xz_2 = 6 * E * Iy / L**2
+        flex_xz_3 = 4 * E * Iy / L
+        flex_xz_4 = 2 * E * Iy / L
 
         # Llenando la matriz de rigidez local
-        # Asignación de valores según la simetría
-        self.k_local[0, 0] = axial
-        self.k_local[0, 6] = -axial
-        self.k_local[6, 0] = -axial
-        self.k_local[6, 6] = axial
-
-        self.k_local[1, 1] = flex_y_1
-        self.k_local[1, 5] = rot_y_1
-        self.k_local[1, 7] = -flex_y_1
-        self.k_local[1, 11] = rot_y_1
-
-        self.k_local[2, 2] = flex_y_2
-        self.k_local[2, 4] = rot_z_1
-        self.k_local[2, 8] = -flex_y_2
-        self.k_local[2, 10] = rot_z_1
-
-        self.k_local[3, 3] = torsion
-        self.k_local[3, 9] = -torsion
-        self.k_local[9, 3] = -torsion
-        self.k_local[9, 9] = torsion
-
-        self.k_local[4, 2] = rot_z_1
-        self.k_local[4, 4] = flex_z_1
-        self.k_local[4, 8] = -rot_z_1
-        self.k_local[4, 10] = flex_z_2
-
-        self.k_local[5, 1] = rot_y_1
-        self.k_local[5, 5] = flex_y_3
-        self.k_local[5, 7] = -rot_y_1
-        self.k_local[5, 11] = flex_y_4
-
-        self.k_local[7, 1] = -flex_y_1
-        self.k_local[7, 5] = -rot_y_1
-        self.k_local[7, 7] = flex_y_1
-        self.k_local[7, 11] = -rot_y_1
-
-        self.k_local[8, 2] = -flex_y_2
-        self.k_local[8, 4] = -rot_z_1
-        self.k_local[8, 8] = flex_y_2
-        self.k_local[8, 10] = -rot_z_1
-
-        self.k_local[10, 2] = rot_z_1
-        self.k_local[10, 4] = flex_z_2
-        self.k_local[10, 8] = -rot_z_1
-        self.k_local[10, 10] = flex_z_1
-
-        self.k_local[11, 1] = rot_y_1
-        self.k_local[11, 5] = flex_y_4
-        self.k_local[11, 7] = -rot_y_1
-        self.k_local[11, 11] = flex_y_3
+        # Matriz de rigidez para una viga 3D, segun manual de SAP2000
+        self.k_local = np.array([
+            [axial, 0, 0, 0, 0, 0, -axial, 0, 0, 0, 0, 0],
+            [0, flex_xy_1, 0, 0, 0, flex_xy_2, 0, -flex_xy_1, 0, 0, 0, flex_xy_2],
+            [0, 0, flex_xz_1, 0, -flex_xz_2, 0, 0, 0, -flex_xz_1, 0, -flex_xz_2, 0],
+            [0, 0, 0, torsion, 0, 0, 0, 0, 0, -torsion, 0, 0],
+            [0, 0, -flex_xz_2, 0, flex_xz_3, 0, 0, 0, flex_xz_2, 0, flex_xz_4, 0],
+            [0, flex_xy_2, 0, 0, 0, flex_xy_3, 0, -flex_xy_2, 0, 0, 0, flex_xy_4],
+            [-axial, 0, 0, 0, 0, 0, axial, 0, 0, 0, 0, 0],
+            [0, -flex_xy_1, 0, 0, 0, -flex_xy_2, 0, flex_xy_1, 0, 0, 0, -flex_xy_2],
+            [0, 0, -flex_xz_1, 0, flex_xz_2, 0, 0, 0, flex_xz_1, 0, flex_xz_2, 0],
+            [0, 0, 0, -torsion, 0, 0, 0, 0, 0, torsion, 0, 0],
+            [0, 0, -flex_xz_2, 0, flex_xz_4, 0, 0, 0, flex_xz_2, 0, flex_xz_3, 0],
+            [0, flex_xy_2, 0, 0, 0, flex_xy_4, 0, -flex_xy_2, 0, 0, 0, flex_xy_3]
+        ])
 
     def _compute_transformation_matrix(self):
         """Calcula la matriz de transformación del elemento y la almacena en self.T."""
-        # Calculo de cosenos directores
-        # Coordenadas de los nodos del elemento
         p1 = np.array(self.nodes[0].coords)
         p2 = np.array(self.nodes[1].coords)
-        # Vector direccion
         dx = p2 - p1
-        L = np.linalg.norm(dx)  # longitud del elemento
+        L = np.linalg.norm(dx)
 
-        if L < 1e-10:
-            raise ValueError("Elemento tiene longitud cero.")
+        if L < 1e-9:
+            raise ValueError("La longitud del elemento no puede ser cero.")
 
-        # Vector unitario del eje local x
-        unit_vector_x = dx / L
+        l, m, n = dx / L
 
-        # Vector de referencia para calcular ejes locales y/z
-        v_ref = np.array([1.0, 0.0, 0.0])  # Eje global X
+        if np.isclose(l, 0) and np.isclose(m, 0):
+            R_row1 = np.array([0, 0, 1 if n > 0 else -1])
+            R_row2 = np.array([0, 1, 0])
+            R_row3 = np.array([-1 if n > 0 else 1, 0, 0])
+        else:
+            R_row1 = np.array([l, m, n])
+            D = np.sqrt(l**2 + m**2)
+            R_row2 = np.array([-m/D, l/D, 0])
+            R_row3 = np.cross(R_row1, R_row2)
 
-        # Si el elemento es vertical (paralelo al eje Z)
-        if np.abs(unit_vector_x[2]) > 0.999:
-            v_ref = np.array([0.0, 1.0, 0.0])  # Usar eje global Y como referencia
-
-        # Calcular vector temporal para eje local y
-        m_temp = np.cross(v_ref, unit_vector_x)
-        if np.linalg.norm(m_temp) < 1e-10:  # Caso especial para elementos alinieados
-            v_ref = np.array([0.0, 0.0, 1.0])  # Usar eje global Z como referencia
-            m_temp = np.cross(v_ref, unit_vector_x)
-
-        # Normalizar vectores locales
-        m = m_temp / np.linalg.norm(m_temp)
-        n = np.cross(unit_vector_x, m)
-
-        # Matriz de rotacion 3x3
-        R = np.column_stack((unit_vector_x, m, n))
-
-        # Inicializa T como una matriz de ceros 12x12
+        R = np.vstack([R_row1, R_row2, R_row3])
+        
         self.T = np.zeros((12, 12))
-
-        # Llenar bloques diagolanes
-        for i in range(0, 12, 3):
-            self.T[i : i + 3, i : i + 3] = R
+        for i in range(4):
+            self.T[i*3:(i+1)*3, i*3:(i+1)*3] = R
 
     def _compute_global_stiffness(self):
         """Calcula la matriz de rigidez global del elemento y la almacena en self.k_global."""
         self.k_global = self.T.T @ self.k_local @ self.T
 
     def _compute_local_mass(self):
-        """Calcula la matriz de masa local del elemento y la almacena en self.m_local."""
+        """Calcula la matriz de masa local 'lumped' (diagonal).
+
+        Este método es numéricamente muy estable.
+        """
         rho = self.material["rho"]
         A = self.section["area"]
         L = self.L
-        Ix = self.section["Ix"]
-
-        factor = rho * A * L / 420
-        rx2 = Ix / A
+        total_mass = rho * A * L
+        node_mass = total_mass / 2.0
 
         self.m_local = np.zeros((12, 12))
 
-        # Términos diagonales principales
-        self.m_local[0, 0] = 140
-        self.m_local[1, 1] = 156
-        self.m_local[2, 2] = 156
-        self.m_local[3, 3] = 140 * rx2
-        self.m_local[4, 4] = 4 * L**2
-        self.m_local[5, 5] = 4 * L**2
+        # Asignar la mitad de la masa a las traslaciones de cada nodo
+        np.fill_diagonal(self.m_local, [node_mass] * 3 + [0] * 3 + [node_mass] * 3 + [0] * 3)
 
-        # Términos acoplados
-        self.m_local[0, 6] = self.m_local[6, 0] = 70
-        self.m_local[1, 5] = self.m_local[5, 1] = 22 * L
-        self.m_local[1, 7] = self.m_local[7, 1] = 54
-        self.m_local[1, 11] = self.m_local[11, 1] = -13 * L
-        self.m_local[2, 4] = self.m_local[4, 2] = -22 * L
-        self.m_local[2, 8] = self.m_local[8, 2] = 54
-        self.m_local[2, 10] = self.m_local[10, 2] = 13 * L
-        self.m_local[3, 9] = self.m_local[9, 3] = 70 * rx2
-        self.m_local[4, 8] = self.m_local[8, 4] = 13 * L
-        self.m_local[4, 10] = self.m_local[10, 4] = -3 * L**2
-        self.m_local[5, 7] = self.m_local[7, 5] = -13 * L
-        self.m_local[5, 11] = self.m_local[11, 5] = -3 * L**2
-
-        # Bloque inferior derecho
-        self.m_local[6, 6] = 140
-        self.m_local[7, 7] = 156
-        self.m_local[8, 8] = 156
-        self.m_local[9, 9] = 140 * rx2
-        self.m_local[10, 10] = 4 * L**2
-        self.m_local[11, 11] = 4 * L**2
-
-        # Multiplicar por factor escalar
-        self.m_local *= factor
-
-        # Asegurarse de que la matriz de masa sea definida positiva
-        self.m_local += np.eye(12) * 1e-6
+        # Añadir una pequeña inercia rotacional para estabilidad numérica
+        # Esto evita que las rotaciones tengan masa cero, lo que causa problemas.
+        placeholder_inertia = 1e-5 * total_mass
+        self.m_local[3, 3] = self.m_local[4, 4] = self.m_local[5, 5] = placeholder_inertia
+        self.m_local[9, 9] = self.m_local[10, 10] = self.m_local[11, 11] = placeholder_inertia
 
     def _compute_global_mass(self):
-        """Transforma la matriz de masa a coordenadas globales"""
+        """Transforma la matriz de masa local a coordenadas globales."""
         self.m_global = self.T.T @ self.m_local @ self.T

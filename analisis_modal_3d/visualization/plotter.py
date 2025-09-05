@@ -16,7 +16,7 @@ def plot_mode_shape(
     - Tipografía limpia (Arial) y composición mejorada.
     """
     # 1. Extraer puntos y líneas
-    points = np.array([node.coords for node in structure.nodes])
+    points = np.array([node.coords for node in structure.nodes], dtype=float) # MODIFICADO: dtype=float
     lines = np.array([[2, structure.nodes.index(e.nodes[0]), structure.nodes.index(e.nodes[1])] for e in structure.elements])
 
     # 2. Crear mallas
@@ -103,7 +103,7 @@ def animate_mode_shape(
     """
     Anima la forma modal y la guarda como un GIF.
     """
-    points = np.array([node.coords for node in structure.nodes])
+    points = np.array([node.coords for node in structure.nodes], dtype=float) # MODIFICADO: dtype=float
     lines = np.array(
         [
             [2, structure.nodes.index(e.nodes[0]), structure.nodes.index(e.nodes[1])]

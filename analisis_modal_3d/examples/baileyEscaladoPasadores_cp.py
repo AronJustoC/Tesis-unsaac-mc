@@ -31,10 +31,10 @@ def run_example():
             "G": 77e9,  # Módulo de corte (Pa)
             "rho": 7850# * 7.13,  # Densidad (kg/m³)
         },
-        "ASTM-A36_modificado": {
-            "E": 200e9*1,
-            "G": 77e9,
-            "rho": 7950,
+        "ASTM-A36_Stiffer": {
+            "E": 200e9 * 1.15,  # Increased by 15%
+            "G": 77e9 * 1.15,   # Increased by 15%
+            "rho": 7950  # Same density as original ASTM-A36
         },
     }
 
@@ -48,21 +48,21 @@ def run_example():
         },
         "100x80": {
             "area": (0.010 * 0.008),  # 80 mm²
-            "Ix": (10933333.34e-12 / 10000),  # Torsion constant
-            "Iy": (6666666.67e-12 / 10000),  # Moment of inertia about y-axis
-            "Iz": (4266666.67e-12 / 10000),  # Moment of inertia about z-axis
+            "Ix": 10933333.34e-12 / 10000,  # Torsion constant
+            "Iy": 6666666.67e-12 / 10000,  # Moment of inertia about y-axis
+            "Iz": 4266666.67e-12 / 10000,  # Moment of inertia about z-axis
         },
         "80x80": {
             "area": (0.008 * 0.008),  # 64 mm²
-            "Ix": (6826666.66e-12 / 10000),  # Torsion constant
-            "Iy": (3413333.33e-12 / 10000),  # Moment of inertia about y-axis
-            "Iz": (3413333.33e-12 / 10000),  # Moment of inertia about z-axis
+            "Ix": 6826666.66e-12 / 10000,  # Torsion constant
+            "Iy": 3413333.33e-12 / 10000,  # Moment of inertia about y-axis
+            "Iz": 3413333.33e-12 / 10000,  # Moment of inertia about z-axis
         },
         "H420x180": {  # H-section
             "area": (0.042 * 0.002 + 2 * 0.018 * 0.002),  # Web + 2 Flanges
-            "Ix": (399386666.66e-12 / 10000),  # Torsion constant
-            "Iy": (379693333.33e-12 / 10000),  # Major axis moment of inertia
-            "Iz": (19693333.33e-12 / 10000),  # Minor axis moment of inertia
+            "Ix": 399386666.66e-12 / 10000,  # Torsion constant
+            "Iy": 379693333.33e-12 / 10000,  # Major axis moment of inertia
+            "Iz": 19693333.33e-12 / 10000,  # Minor axis moment of inertia
         },
     }
 
@@ -395,21 +395,21 @@ def run_example():
         (70, 73, "100x80", "ASTM-A36"),
         (71, 72, "80x40", "ASTM-A36"),
         (72, 73, "80x40", "ASTM-A36"),
-        (1, 74, "H420x180", "ASTM-A36"),
+        (1, 74, "H420x180", "ASTM-A36_Stiffer"),
         (74, 3, "80x40", "ASTM-A36"),
-        (11, 75, "H420x180", "ASTM-A36"),
+        (11, 75, "H420x180", "ASTM-A36_Stiffer"),
         (75, 13, "80x40", "ASTM-A36"),
-        (21, 76, "H420x180", "ASTM-A36"),
+        (21, 76, "H420x180", "ASTM-A36_Stiffer"),
         (76, 23, "80x40", "ASTM-A36"),
-        (31, 77, "H420x180", "ASTM-A36"),
+        (31, 77, "H420x180", "ASTM-A36_Stiffer"),
         (77, 33, "80x40", "ASTM-A36"),
-        (41, 78, "H420x180", "ASTM-A36"),
+        (41, 78, "H420x180", "ASTM-A36_Stiffer"),
         (78, 43, "80x40", "ASTM-A36"),
-        (51, 79, "H420x180", "ASTM-A36"),
+        (51, 79, "H420x180", "ASTM-A36_Stiffer"),
         (79, 53, "80x40", "ASTM-A36"),
-        (61, 80, "H420x180", "ASTM-A36"),
+        (61, 80, "H420x180", "ASTM-A36_Stiffer"),
         (80, 63, "80x40", "ASTM-A36"),
-        (71, 81, "H420x180", "ASTM-A36"),
+        (71, 81, "H420x180", "ASTM-A36_Stiffer"),
         (81, 73, "80x40", "ASTM-A36"),
         (82, 83, "80x40", "ASTM-A36"),
         (83, 84, "80x40", "ASTM-A36"),
@@ -553,58 +553,49 @@ def run_example():
         (151, 154, "100x80", "ASTM-A36"),
         (152, 153, "80x40", "ASTM-A36"),
         (153, 154, "80x40", "ASTM-A36"),
-        (82, 155, "H420x180", "ASTM-A36"),
+        (82, 155, "H420x180", "ASTM-A36_Stiffer"),
         (155, 84, "80x40", "ASTM-A36"),
-        (92, 156, "H420x180", "ASTM-A36"),
+        (92, 156, "H420x180", "ASTM-A36_Stiffer"),
         (156, 94, "80x40", "ASTM-A36"),
-        (102, 157, "H420x180", "ASTM-A36"),
+        (102, 157, "H420x180", "ASTM-A36_Stiffer"),
         (157, 104, "80x40", "ASTM-A36"),
-        (112, 158, "H420x180", "ASTM-A36"),
+        (112, 158, "H420x180", "ASTM-A36_Stiffer"),
         (158, 114, "80x40", "ASTM-A36"),
-        (122, 159, "H420x180", "ASTM-A36"),
+        (122, 159, "H420x180", "ASTM-A36_Stiffer"),
         (159, 124, "80x40", "ASTM-A36"),
-        (132, 160, "H420x180", "ASTM-A36"),
+        (132, 160, "H420x180", "ASTM-A36_Stiffer"),
         (160, 134, "80x40", "ASTM-A36"),
-        (142, 161, "H420x180", "ASTM-A36"),
+        (142, 161, "H420x180", "ASTM-A36_Stiffer"),
         (161, 144, "80x40", "ASTM-A36"),
-        (152, 162, "H420x180", "ASTM-A36"),
+        (152, 162, "H420x180", "ASTM-A36_Stiffer"),
         (162, 154, "80x40", "ASTM-A36"),
-        (1, 82, "H420x180", "ASTM-A36"),
+        (1, 82, "H420x180", "ASTM-A36_Stiffer"),
         (1, 92, "80x40", "ASTM-A36"),
         (11, 82, "80x40", "ASTM-A36"),
-        (11, 92, "H420x180", "ASTM-A36"),
+        (11, 92, "H420x180", "ASTM-A36_Stiffer"),
         (11, 102, "80x40", "ASTM-A36"),
         (21, 92, "80x40", "ASTM-A36"),
-        (21, 102, "H420x180", "ASTM-A36"),
+        (21, 102, "H420x180", "ASTM-A36_Stiffer"),
         (21, 112, "80x40", "ASTM-A36"),
         (31, 102, "80x40", "ASTM-A36+"),  # ASTM-A36+
-        (31, 112, "H420x180", "ASTM-A36"),
+        (31, 112, "H420x180", "ASTM-A36_Stiffer"),
         (31, 122, "80x40", "ASTM-A36"),
         (41, 112, "80x40", "ASTM-A36"),
         (41, 122, "H420x180", "ASTM-A36+"),  # ASTM-A36+
         (41, 132, "80x40", "ASTM-A36"),
         (51, 122, "80x40", "ASTM-A36"),
-        (51, 132, "H420x180", "ASTM-A36"),
+        (51, 132, "H420x180", "ASTM-A36_Stiffer"),
         (51, 142, "80x40", "ASTM-A36"),
         (61, 132, "80x40", "ASTM-A36"),
-        (61, 142, "H420x180", "ASTM-A36"),
+        (61, 142, "H420x180", "ASTM-A36_Stiffer"),
         (61, 152, "80x40", "ASTM-A36"),
         (71, 142, "80x40", "ASTM-A36"),
-        (71, 152, "H420x180", "ASTM-A36"),
+        (71, 152, "H420x180", "ASTM-A36_Stiffer"),
     ]
 
     for el in elements:
-        node1 = node_coords[el[0]]
-        node2 = node_coords[el[1]]
-        section_name = el[2]
-        material_name = el[3]
-
-        # Check if the element is horizontal (same Y coordinate) and not a "viga h"
-        if node1.y == node2.y and section_name != "H420x180":
-            material_name = "ASTM-A36_modificado"
-
         structure.add_element(
-            node1, node2, sections[section_name], materials[material_name]
+            node_coords[el[0]], node_coords[el[1]], sections[el[2]], materials[el[3]]
         )
 
     # ========== Aplicar restricciones ==========

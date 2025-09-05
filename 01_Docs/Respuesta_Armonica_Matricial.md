@@ -1,169 +1,153 @@
-# Respuesta Armónica Matricial: Teoría y Desarrollo
+# Guía de Implementación: Análisis de Respuesta Armónica Forzada
 
-## 1. Ecuación General del Sistema
+Este documento describe el procedimiento paso a paso para calcular la respuesta en estado estacionario de una estructura sometida a una excitación armónica, como la producida por una masa rotativa desbalanceada. El método descrito es la **Solución Directa en el Dominio de la Frecuencia**.
 
-Para un sistema con nn grados de libertad (GDL) sometido a fuerzas armónicas externas:
+## Ecuación Fundamental del Movimiento
+
+La ecuación que gobierna la dinámica de un sistema estructural es:
 
 $$
 \mathbf{M} \ddot{\mathbf{u}}(t) + \mathbf{C} \dot{\mathbf{u}}(t) + \mathbf{K} \mathbf{u}(t) = \mathbf{F}(t)
 $$
 
 Donde:
+- $\mathbf{M}$: Matriz de Masa global.
+- $\mathbf{K}$: Matriz de Rigidez global.
+- $\mathbf{C}$: Matriz de Amortiguamiento global.
+- $\mathbf{F}(t)$: Vector de fuerzas externas dependientes del tiempo.
+- $\mathbf{u}(t)$: Vector de desplazamientos nodales.
 
-- $\mathbf{M}$: Matriz de masa (n×n)
-- $\mathbf{C}$: Matriz de amortiguamiento (n×n, asumida nula si no se especifica)
-- $\mathbf{K}$: Matriz de rigidez (n×n)
-- $\mathbf{u}(t)$: Vector de desplazamientos (n×1)
-- $\mathbf{F}(t) = \mathbf{F}_0 e^{i\omega t}$: Fuerza armónica externa, con:
-  - $\mathbf{F}_0$: Vector de magnitudes complejas (n×1)
-  - $\omega$: Frecuencia de excitación (rad/s)
+---
 
-## 2. Solución Asumida para Respuesta Permanente
 
-Se asume una solución armónica de la misma frecuencia que la fuerza externa:
+## Paso 1: Obtener las Matrices de Rigidez (K) y Masa (M)
 
-$$
-\mathbf{u}(t) = \mathbf{U} e^{i\omega t}
-$$
+Estas matrices se asumen ya ensambladas a partir del análisis estático y modal previo. Son la base para el análisis dinámico.
 
-Donde $\mathbf{U}$ es un vector complejo (n×1) que contiene amplitudes y fases.
-Derivando y sustituyendo en la ecuación:
+---
 
-$$
-\left( -\omega^2 \mathbf{M} + i\omega \mathbf{C} + \mathbf{K} \right) \mathbf{U} e^{i\omega t} = \mathbf{F}_0 e^{i\omega t}
-$$
+## Paso 2: Generación de la Matriz de Amortiguamiento (C)
 
-## 3. Ecuación Algebraica en el Dominio de la Frecuencia
+El amortiguamiento en una estructura real es complejo de modelar. Un método práctico y ampliamente utilizado es el **Amortiguamiento de Rayleigh**. Este método asume que la matriz de amortiguamiento es una combinación lineal de las matrices de masa y rigidez:
 
-Se obtiene el sistema lineal:
+$$ 
+\mathbf{C} = \alpha \mathbf{M} + \beta \mathbf{K} 
+$$ 
 
-$$
-\boxed{\mathbf{Z}(\omega) \mathbf{U} = \mathbf{F}_0}
-$$
+Donde $\alpha$ y $\beta$ son constantes que se determinan a partir del comportamiento de amortiguamiento deseado en dos frecuencias específicas.
 
-Donde $\mathbf{Z}(\omega)$ es la matriz de impedancia dinámica:
+### ¿Cómo calcular $\alpha$ y $\beta$?
 
-$$
-\mathbf{Z}(\omega) = \mathbf{K} - \omega^2 \mathbf{M} + i\omega \mathbf{C}
-$$
+1.  **Selecciona dos frecuencias**: Generalmente se eligen dos frecuencias naturales ($\omega_i$ y $\omega_j$) obtenidas del análisis modal. Por ejemplo, la primera y la tercera frecuencia natural.
 
-## 4. Relación con el Análisis Modal
+2.  **Asigna relaciones de amortiguamiento ($\zeta$)**: Para cada frecuencia seleccionada, se asigna una relación de amortiguamiento modal. Por ejemplo, $\zeta_i = 0.02$ (2% de amortiguamiento) y $\zeta_j = 0.02$ (2%).
 
-Si se realizó un análisis modal previo (sin fuerzas externas), se tienen:
+3.  **Resuelve el sistema de ecuaciones**: La relación entre $\zeta_r$, $\alpha$ y $\beta$ para una frecuencia natural $\omega_r$ es:
 
-- Frecuencias naturales: $\omega_r$ (rad/s)
-- Modos de vibración: $\boldsymbol{\Phi} = [\boldsymbol{\phi}_1, \boldsymbol{\phi}_2, \dots, \boldsymbol{\phi}_n]$
+    $$ 
+    2 \zeta_r \omega_r = \alpha + \beta \omega_r^2 
+    $$ 
 
-Los modos son $\mathbf{M}$-ortonormales:
+    Planteando esto para nuestras dos frecuencias seleccionadas ($\omega_i, \omega_j$), obtenemos un sistema de 2x2:
 
-$$
-\boldsymbol{\Phi}^T \mathbf{M} \boldsymbol{\Phi} = \mathbf{I}, \quad \boldsymbol{\Phi}^T \mathbf{K} \boldsymbol{\Phi} = \boldsymbol{\Omega}^2
-$$
+    $$ 
+    \begin{bmatrix} 1 & \omega_i^2 \\ 1 & \omega_j^2 \end{bmatrix} 
+    \begin{Bmatrix} \alpha \\ \beta \end{Bmatrix}
+    = 
+    \begin{Bmatrix} 2 \zeta_i \omega_i \\ 2 \zeta_j \omega_j \end{Bmatrix}
+    $$ 
 
-Con $\boldsymbol{\Omega}^2 = \text{diag}(\omega_1^2, \omega_2^2, \dots, \omega_n^2)$.
+4.  **Despeja $\alpha$ y $\beta$**: Resolviendo el sistema anterior (analítica o numéricamente), se obtienen los coeficientes para construir la matriz $\mathbf{C}$.
 
-## 5. Descomposición Modal de la Respuesta
+---
 
-La solución se expresa como combinación lineal de los modos:
+## Paso 3: Definición del Vector de Fuerza por Desbalance Rotativo
 
-$$
-\mathbf{U} = \sum_{r=1}^{n} \eta_r \boldsymbol{\phi}_r = \boldsymbol{\Phi} \boldsymbol{\eta}
-$$
+Un motor con una masa desbalanceada $m_e$ girando a una velocidad angular $\omega$ con una excentricidad (distancia del centro de giro a la masa) $e$, produce una fuerza centrífuga de magnitud constante:
 
-Sustituyendo en la ecuación de impedancia y premultiplicando por $\boldsymbol{\Phi}^T$:
+$$ F_{mag} = m_e e \omega^2 $$
 
-$$
-\boldsymbol{\Phi}^T \mathbf{Z}(\omega) \boldsymbol{\Phi} \boldsymbol{\eta} = \boldsymbol{\Phi}^T \mathbf{F}_0
+Esta fuerza gira con el motor. Sus componentes en coordenadas cartesianas son:
+
+$$ F_x(t) = F_{mag} \cos(\omega t) 
+\\ F_y(t) = F_{mag} \sin(\omega t) 
 $$
 
-## 6. Ecuación Desacoplada (Modos Reales)
+Para el análisis en el dominio de la frecuencia, representamos la fuerza usando notación compleja: $\mathbf{F}(t) = \mathbf{F}_0 e^{i\omega t}$. El vector de amplitudes complejas $\mathbf{F}_0$ es un vector columna donde la mayoría de sus elementos son cero.
 
-Si $\mathbf{C} = 0$ o es proporcional (amortiguamiento Rayleigh), el sistema se desacopla:
+### Aplicación en la mitad de la estructura:
 
-$$
-\left[ -\omega^2 \mathbf{I} + \boldsymbol{\Omega}^2 \right] \boldsymbol{\eta} = \boldsymbol{\Phi}^T \mathbf{F}_0
-$$
+Supongamos que el motor se ubica en el **nodo `k`**, que está a la mitad de la viga.
+- El grado de libertad (GDL) para el desplazamiento en X de ese nodo es `dof_x`.
+- El GDL para el desplazamiento en Y es `dof_y`.
 
-Cada modo $r$ tiene una ecuación independiente:
+El vector $\mathbf{F}_0$ se construye de la siguiente manera:
+- La componente `dof_x` del vector $\mathbf{F}_0$ será $m_e e \omega^2$.
+- La componente `dof_y` del vector $\mathbf{F}_0$ será $m_e e \omega^2 e^{i\pi/2} = i \cdot (m_e e \omega^2)$. Esto representa la fuerza en Y desfasada 90 grados.
+- Todos los demás elementos de $\mathbf{F}_0$ son cero.
 
-$$
-\boxed{(-\omega^2 + \omega_r^2) \eta_r = \phi_r^T \mathbf{F}_0}
-$$
+**Nota importante**: Para un análisis de barrido en frecuencia, el término $\omega^2$ en la magnitud de la fuerza hace que la amplitud de la excitación varíe con la frecuencia de análisis.
 
-## 7. Solución por Modos
+---
 
-La amplitud compleja del modo $r$ es:
+## Paso 4: Cálculo de la Respuesta Armónica (Solución Directa)
 
-$$
-\eta_r = \frac{\boldsymbol{\phi}_r^T \mathbf{F}_0}{\omega_r^2 - \omega^2}
-$$
+Asumimos que la respuesta del sistema también será armónica y con la misma frecuencia de la excitación: $\mathbf{u}(t) = \mathbf{U} e^{i\omega t}$. Al sustituir esta solución en la ecuación de movimiento, obtenemos una ecuación algebraica:
 
-Nota: Si $\omega \approx \omega_r$, hay resonancia (amplitud $\eta_r \to \infty$).
+$$ 
+\left( \mathbf{K} - \omega^2 \mathbf{M} + i\omega \mathbf{C} \right) \mathbf{U} = \mathbf{F}_0 
+$$ 
 
-## 8. Respuesta Física Total
+Definimos la **Matriz de Rigidez Dinámica** (o Matriz de Impedancia) como:
 
-$$
-\mathbf{u}(t) = \Re \left\{ \left( \sum_{r=1}^{n} \eta_r \boldsymbol{\phi}_r \right) e^{i\omega t} \right\}
-$$
+$$ 
+\mathbf{Z}(\omega) = \mathbf{K} - \omega^2 \mathbf{M} + i\omega \mathbf{C} 
+$$ 
 
-- $\eta_r$: Amplitud compleja del modo $r$ (incluye fase).
-- $\boldsymbol{\phi}_r$: Vector modal del modo $r$.
+El problema se reduce a resolver el siguiente sistema de ecuaciones lineales complejas para cada frecuencia de excitación $\omega$ de interés:
 
-## 9. Caso con Amortiguamiento No Proporcional
+$$ 
+\mathbf{Z}(\omega) \mathbf{U} = \mathbf{F}_0 
+$$ 
 
-Si $\mathbf{C}$ no es diagonalizable por los modos, se resuelve:
+La solución $\mathbf{U}$ es un vector de **amplitudes de desplazamiento complejas**.
 
-$$
-\mathbf{Z}(\omega) \mathbf{U} = \mathbf{F}_0
-$$
+### Interpretación de la solución compleja U:
 
-Requiere:
+Para cada GDL `j`:
+- La **amplitud del desplazamiento** es el módulo del número complejo: $A_j = |\mathbf{U}_j|$.
+- La **fase del desplazamiento** (respecto a la fuerza) es el argumento del número complejo: $\phi_j = \arg(\mathbf{U}_j)$.
 
-- Inversión directa: $\mathbf{U} = \mathbf{Z}^{-1}(\omega) \mathbf{F}_0$ (costoso para sistemas grandes).
-- Descomposición espectral o métodos iterativos.
+El desplazamiento físico en el tiempo es: $u_j(t) = A_j \cos(\omega t + \phi_j)$.
 
-## 10. Diagrama de Flujo para Implementación
+---
 
-```mermaid
-graph TD
-    A[Inicio] --> B{Definir M, K, C, F0, ω};
-    B --> C{Análisis Modal};
-    C --> D{Obtener ω_r, Φ};
-    D --> E{Calcular Fuerza Modal Q = Φ^T * F0};
-    E --> F{Para cada modo r};
-    F --> G{Calcular η_r = Q_r / (ω_r^2 - ω^2)};
-    G --> H{Fin Para};
-    H --> I{Calcular U = Σ η_r * φ_r};
-    I --> J{Respuesta u(t) = Re(U * e^(iωt))};
-    J --> K[Fin];
-```
+## Resumen del Proceso (Guía para el Código)
 
-## Ejemplo: Sistema de 3 GDL
+1.  **Inicialización**:
+    - Tener las matrices $\mathbf{M}$ y $\mathbf{K}$ ya construidas.
+    - Definir los parámetros del desbalance: $m_e$ y $e$.
+    - Definir los parámetros de amortiguamiento: seleccionar dos pares $(\omega_i, \zeta_i)$ y $(\omega_j, \zeta_j)$.
 
-$
-\mathbf{M} = \begin{bmatrix} 2 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}, \quad
-\mathbf{K} = \begin{bmatrix} 300 & -100 & 0 \\ -100 & 200 & -100 \\ 0 & -100 & 100 \end{bmatrix}, \quad
-\mathbf{F}_0 = \begin{bmatrix} 10 \\ 0 \\ 0 \end{bmatrix} e^{i \cdot 4t}
-$
+2.  **Cálculo de Amortiguamiento**:
+    - Calcular los coeficientes $\alpha$ y $\beta$ de Rayleigh.
+    - Construir la matriz de amortiguamiento: $\mathbf{C} = \alpha \mathbf{M} + \beta \mathbf{K}$.
 
-- **Análisis modal previo (valores asumidos para el ejemplo):**
+3.  **Barrido en Frecuencia**:
+    - Definir un rango de frecuencias de excitación para analizar (ej: `np.linspace(0, 100, 500)`).
+    - Crear un arreglo para almacenar los resultados (ej: amplitudes de un nodo de interés).
 
-  - $\omega_1 = 5.0 \ \text{rad/s}, \quad \omega_2 = 10.0 \ \text{rad/s}, \quad \omega_3 = 15.0 \ \text{rad/s}$
-  - $\boldsymbol{\phi}_1 = [0.3, 0.6, 0.7]^T, \quad \boldsymbol{\phi}_2 = [0.8, -0.5, -0.3]^T, \quad \boldsymbol{\phi}_3 = [0.5, 0.6, -0.6]^T$
+4.  **Bucle de Solución**:
+    - Para cada frecuencia $\omega$ en el rango:
+        a. **Construir el vector de fuerza $\mathbf{F}_0$**:
+           - Calcular la magnitud $F_{mag} = m_e e \omega^2$.
+           - Crear el vector $\mathbf{F}_0$ y asignar las componentes complejas en los GDL correspondientes al nodo de aplicación.
+        b. **Construir la matriz de rigidez dinámica $\mathbf{Z}(\omega)$**:
+           - $\mathbf{Z}(\omega) = \mathbf{K} - \omega^2 \mathbf{M} + i\omega \mathbf{C}$.
+        c. **Resolver el sistema lineal**:
+           - $\mathbf{U} = \text{np.linalg.solve}(\mathbf{Z}(\omega), \mathbf{F}_0)$.
+        d. **Almacenar resultados**:
+           - Extraer la amplitud del desplazamiento en el GDL de interés (ej: `np.abs(U[dof_interes])`) y guardarla.
 
-- **Fuerza modal:**
-
-  - $Q_1 = \boldsymbol{\phi}_1^T \mathbf{F}_0 = 0.3 \cdot 10 = 3.0$
-  - $Q_2 = \boldsymbol{\phi}_2^T \mathbf{F}_0 = 0.8 \cdot 10 = 8.0$
-  - $Q_3 = \boldsymbol{\phi}_3^T \mathbf{F}_0 = 0.5 \cdot 10 = 5.0$
-
-- **Coordenadas modales ($\omega = 4 \ \text{rad/s}$):**
-
-  - $\eta_1 = \frac{3.0}{5^2 - 4^2} = \frac{3.0}{9} = 0.333$
-  - $\eta_2 = \frac{8.0}{10^2 - 4^2} = \frac{8.0}{84} = 0.095$
-  - $\eta_3 = \frac{5.0}{15^2 - 4^2} = \frac{5.0}{209} = 0.024$
-
-- **Respuesta física:**
-  $
-\mathbf{U} = \eta_1 \boldsymbol{\phi}_1 + \eta_2 \boldsymbol{\phi}_2 + \eta_3 \boldsymbol{\phi}_3 = 0.333 \begin{bmatrix} 0.3 \\ 0.6 \\ 0.7 \end{bmatrix} + 0.095 \begin{bmatrix} 0.8 \\ -0.5 \\ -0.3 \end{bmatrix} + 0.024 \begin{bmatrix} 0.5 \\ 0.6 \\ -0.6 \end{bmatrix} = \begin{bmatrix} 0.188 \\ 0.167 \\ 0.190 \end{bmatrix}
-$
+5.  **Visualización**:
+    - Graficar las amplitudes almacenadas en función del rango de frecuencias $\omega$. El gráfico resultante es la **Función de Respuesta en Frecuencia (FRF)**, que mostrará los picos de resonancia.

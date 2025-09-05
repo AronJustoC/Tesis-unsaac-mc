@@ -53,6 +53,13 @@ class MainMenu:
             except ValueError:
                 print("Entrada inválida. Por favor, ingrese un número.")
 
+    def _get_validated_float_input(self, prompt):
+        while True:
+            try:
+                return float(input(prompt).strip())
+            except ValueError:
+                print("Entrada inválida. Por favor, ingrese un número decimal.")
+
     def display_main_menu(self):
         print("\n--- Menú Principal ---")
         print("1. Seleccionar y Ejecutar Ejemplo")
@@ -120,6 +127,8 @@ class MainMenu:
                     print("Número de modos inválido. Intente de nuevo.")
             except ValueError:
                 print("Entrada inválida. Por favor, ingrese un número o 't'.")
+
+        deformation_scale = self._get_validated_float_input("Ingrese el factor de escala de deformación (e.g., 0.1): ")
         
         output_dir = "graficos_resultados/modo_animacion"
         os.makedirs(output_dir, exist_ok=True)
@@ -130,6 +139,7 @@ class MainMenu:
                 self.state.modes[:, i],
                 title=f"Modo {i + 1} - {self.state.freqs[i]:.2f} Hz",
                 filename=filename,
+                deformation_scale=deformation_scale,
             )
         print(f"Se guardaron {num_modes_to_plot} animaciones de los modos en '{output_dir}'.")
 

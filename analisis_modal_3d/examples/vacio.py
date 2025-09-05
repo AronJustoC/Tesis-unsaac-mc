@@ -4,6 +4,9 @@ Ejemplo de Análisis Modal de un Edificio de 3 Pisos en 2D.
 Este script modela un pórtico simple de 3 pisos y 1 vano, realiza un
 análisis modal para encontrar sus frecuencias y modos de vibración, y
 finalmente grafica los primeros modos.
+
+La definición de la estructura sigue un enfoque sistemático (data-driven)
+para facilitar la escalabilidad y la claridad.
 """
 
 # Importaciones necesarias
@@ -11,7 +14,7 @@ from analisis_modal_3d.structures.structure import Structure
 from analisis_modal_3d.analysis.modal import modal_analysis
 from analisis_modal_3d.visualization.plotter import plot_mode_shape
 from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
-from analisis_modal_3d.analysis.assembler import assemble_global_matrices # NUEVA IMPORTACIÓN
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
 
 # Variables globales para almacenar los resultados (serán pobladas por la llamada a la función)
 structure = None
@@ -22,7 +25,7 @@ def ejemplo_edificio_portico_2d():
     """
     Define y analiza un pórtico 2D de 3 pisos.
     """
-    print("Iniciando ejemplo: Edificio de 3 pisos en 2D")
+    print("Iniciando ejemplo: Edificio de 3 pisos en 2D (Enfoque Sistemático)")
     
     # 1. Inicializar la estructura
     local_structure = Structure()
@@ -51,53 +54,50 @@ def ejemplo_edificio_portico_2d():
         },
     }
 
-    # 3. Definir la geometría del pórtico (nodos)
+    # 3. Definir la geometría del pórtico (nodos) de forma sistemática
     # El pórtico estará en el plano XZ (Y=0)
     # Ancho del vano: 5 metros
     # Altura de cada piso: 3 metros
     
-    # Nivel 0 (Base)
-    n1 = local_structure.add_node(0, 0, 0)
-    n2 = local_structure.add_node(5, 0, 0)
-    
-    # Nivel 1
-    n3 = local_structure.add_node(0, 0, 3)
-    n4 = local_structure.add_node(5, 0, 3)
+    node_data = [
+        (1, 0, 0, 0), (2, 5, 0, 0),  # Nivel 0 (Base)
+        (3, 0, 0, 3), (4, 5, 0, 3),  # Nivel 1
+        (5, 0, 0, 6), (6, 5, 0, 6),  # Nivel 2
+        (7, 0, 0, 9), (8, 5, 0, 9)   # Nivel 3
+    ]
 
-    # Nivel 2
-    n5 = local_structure.add_node(0, 0, 6)
-    n6 = local_structure.add_node(5, 0, 6)
+    node_objects = {} # Diccionario para almacenar los objetos Node por su ID
+    for node_id, x, y, z in node_data:
+        node_objects[node_id] = local_structure.add_node(x, y, z)
 
-    # Nivel 3
-    n7 = local_structure.add_node(0, 0, 9)
-    n8 = local_structure.add_node(5, 0, 9)
+    # 4. Definir los elementos estructurales (columnas y vigas) de forma sistemática
+    element_data = [
+        # Columnas
+        (1, 3, "columna_30x30", "acero"), (2, 4, "columna_30x30", "acero"),
+        (3, 5, "columna_30x30", "acero"), (4, 6, "columna_30x30", "acero"),
+        (5, 7, "columna_30x30", "acero"), (6, 8, "columna_30x30", "acero"),
+        # Vigas
+        (3, 4, "viga_40x20", "acero"),
+        (5, 6, "viga_40x20", "acero"),
+        (7, 8, "viga_40x20", "acero")
+    ]
 
-    # 4. Definir los elementos estructurales (columnas y vigas)
-    
-    # Columnas
-    local_structure.add_element(n1, n3, sections["columna_30x30"], materials["acero"])
-    local_structure.add_element(n2, n4, sections["columna_30x30"], materials["acero"])
-    local_structure.add_element(n3, n5, sections["columna_30x30"], materials["acero"])
-    local_structure.add_element(n4, n6, sections["columna_30x30"], materials["acero"])
-    local_structure.add_element(n5, n7, sections["columna_30x30"], materials["acero"])
-    local_structure.add_element(n6, n8, sections["columna_30x30"], materials["acero"])
+    for n1_id, n2_id, section_name, material_name in element_data:
+        node1_obj = node_objects[n1_id]
+        node2_obj = node_objects[n2_id]
+        local_structure.add_element(node1_obj, node2_obj, sections[section_name], materials[material_name])
 
-    # Vigas
-    local_structure.add_element(n3, n4, sections["viga_40x20"], materials["acero"])
-    local_structure.add_element(n5, n6, sections["viga_40x20"], materials["acero"])
-    local_structure.add_element(n7, n8, sections["viga_40x20"], materials["acero"])
-
-    # 5. APLICAR restricciones
+    # 5. Aplicar restricciones
     
     # Empotramiento en la base (nodos 1 y 2)
-    local_structure.add_constraint(n1, ["ux", "uy", "uz", "rx", "ry", "rz"])
-    local_structure.add_constraint(n2, ["ux", "uy", "uz", "rx", "ry", "rz"])
+    local_structure.add_constraint(node_objects[1], ["ux", "uy", "uz", "rx", "ry", "rz"])
+    local_structure.add_constraint(node_objects[2], ["ux", "uy", "uz", "rx", "ry", "rz"])
 
     # Restricción para comportamiento 2D en el plano XZ
     # Se restringen los desplazamientos y giros fuera del plano para todos los nodos
     for node in local_structure.nodes:
         # Si el nodo no está en la base, aplicamos restricciones 2D
-        if node.id not in [n1.id, n2.id]:
+        if node.id not in [node_objects[1].id, node_objects[2].id]:
              local_structure.add_constraint(node, ["uy", "rx", "rz"])
 
     # 6. Visualizar la estructura definida
@@ -108,12 +108,12 @@ def ejemplo_edificio_portico_2d():
     print("\nIniciando análisis modal...")
     try:
         # Ensamblar matrices globales de rigidez y masa
-        K, M = assemble_global_matrices(local_structure) # NUEVA LÍNEA
+        K, M = assemble_global_matrices(local_structure)
 
         # Se piden los primeros 5 modos de vibración
         num_modes = 5
         # Pasar K y M a modal_analysis
-        local_freqs, local_modes = modal_analysis(K, M, local_structure, num_modes=num_modes) # LÍNEA MODIFICADA
+        local_freqs, local_modes = modal_analysis(K, M, local_structure, num_modes=num_modes)
 
         print("\nFrecuencias Naturales (Hz):")
         print("-" * 25)

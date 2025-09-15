@@ -50,8 +50,25 @@ def run_example():
     # Fijar el nodo 0 (empotramiento)
     structure.add_constraint(nodo_0, ['ux', 'uy', 'uz', 'rx', 'ry', 'rz'])
 
+    # Aplicar la fuerza en el nodo 1, en dirección Y
+    force_amplitude = 1000  # Amplitud de la fuerza (N)
+    force_node_index = 1
+    dof_index = 1  # 0:x, 1:y, 2:z, 3:rx, 4:ry, 5:rz
+
+    # Definir nodos de interés para visualización
+    # El nodo de interés es donde se aplica la fuerza
+    interest_node_coords = [structure.nodes[force_node_index].coords]
+    
+    # El nodo con masa es el mismo en este caso
+    mass_node_coords = [structure.nodes[force_node_index].coords]
+
     # Plot the structure with info
-    plot_structure_with_info(structure, title="Estructura de Viga en Voladizo")
+    plot_structure_with_info(
+        structure,
+        title="Estructura de Viga en Voladizo",
+        highlight_coords=interest_node_coords,
+        mass_node_coords=mass_node_coords
+    )
 
     # 2. Ensamblaje y Análisis Modal
     # -----------------------------------------------------
@@ -59,7 +76,7 @@ def run_example():
     K_global, M_global = assembler.assemble_global_matrices(structure)
 
     # Resolver el problema de valores propios
-    freqs, modes = modal.modal_analysis(K_global, M_global, structure)
+    freqs, modes, _ = modal.modal_analysis(K_global, M_global, structure)
 
     # Convertir frecuencias a rad/s
     frecuencias_rad = freqs * 2 * np.pi
@@ -82,11 +99,6 @@ def run_example():
     # ¡PRECAUCIÓN! Si es exactamente igual, la respuesta puede ser infinita sin amortiguamiento.
     force_frequency_hz = freqs[0] * 0.9 # 90% de la primera frecuencia natural
     force_frequency_rad = force_frequency_hz * 2 * np.pi
-
-    # Aplicar la fuerza en el nodo 1, en dirección Y
-    force_amplitude = 1000  # Amplitud de la fuerza (N)
-    force_node_index = 1
-    dof_index = 1  # 0:x, 1:y, 2:z, 3:rx, 4:ry, 5:rz
 
     # Crear el vector de fuerza F0
     num_dofs = K_global.shape[0]

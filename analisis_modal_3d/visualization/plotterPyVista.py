@@ -9,7 +9,7 @@ def animate_harmonic_response(
     structure: "Structure",
     displacement_history: np.ndarray,
     output_filename: str = "graficos_resultados/harmonic_animation.gif",
-    scale_factor: float = 10.0,
+    scale_factor: float = 30.0,
     n_frames: int = 100
 ):
     """

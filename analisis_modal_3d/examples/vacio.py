@@ -22,11 +22,7 @@ freqs = None
 modes = None
 
 def ejemplo_edificio_portico_2d():
-    """
-    Define y analiza un pórtico 2D de 3 pisos.
-    """
-    print("Iniciando ejemplo: Edificio de 3 pisos en 2D (Enfoque Sistemático)")
-    
+         
     # 1. Inicializar la estructura
     local_structure = Structure()
 
@@ -62,8 +58,6 @@ def ejemplo_edificio_portico_2d():
     node_data = [
         (1, 0, 0, 0), (2, 5, 0, 0),  # Nivel 0 (Base)
         (3, 0, 0, 3), (4, 5, 0, 3),  # Nivel 1
-        (5, 0, 0, 6), (6, 5, 0, 6),  # Nivel 2
-        (7, 0, 0, 9), (8, 5, 0, 9)   # Nivel 3
     ]
 
     node_objects = {} # Diccionario para almacenar los objetos Node por su ID
@@ -74,12 +68,8 @@ def ejemplo_edificio_portico_2d():
     element_data = [
         # Columnas
         (1, 3, "columna_30x30", "acero"), (2, 4, "columna_30x30", "acero"),
-        (3, 5, "columna_30x30", "acero"), (4, 6, "columna_30x30", "acero"),
-        (5, 7, "columna_30x30", "acero"), (6, 8, "columna_30x30", "acero"),
         # Vigas
         (3, 4, "viga_40x20", "acero"),
-        (5, 6, "viga_40x20", "acero"),
-        (7, 8, "viga_40x20", "acero")
     ]
 
     for n1_id, n2_id, section_name, material_name in element_data:

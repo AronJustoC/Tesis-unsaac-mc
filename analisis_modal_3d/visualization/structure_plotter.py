@@ -2,35 +2,51 @@ import pyvista as pv
 import numpy as np
 
 
-def plot_structure_with_info(structure, title="Visualización de Estructura"):
+def plot_structure_with_info(structure, title="Visualización de Estructura", highlight_coords=None, highlight_label="Nodos de Interés", mass_node_coords=None):
     """
-    Visualiza una estructura con un estilo profesional y simbología de restricciones.
-    - Paleta de colores profesional (Grafito, Azul, Magenta, Verde).
-    - Iluminación avanzada y renderizado de líneas como tubos.
-    - Tipografía limpia (Arial) y composición mejorada.
+    Visualiza una estructura con un estilo profesional.
+    - Resaltado de nodos de interés y nodos con masa.
     """
     # 1. Extraer puntos y líneas
     points = np.array([node.coords for node in structure.nodes])
     lines = np.array([[2, structure.nodes.index(e.nodes[0]), structure.nodes.index(e.nodes[1])] for e in structure.elements])
 
-    # 2. Crear malla de la estructura
+    # 2. Crear malla y calcular tamaño
     mesh = pv.PolyData(points, lines=lines)
+    bounds = mesh.bounds
+    diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
+    if diag_length == 0: diag_length = 1.0
 
     # 3. Configurar el plotter
     plotter = pv.Plotter(window_size=(800, 700))
     plotter.set_background("white")
 
-    # 4. Añadir malla con estilo profesional 
+    # 4. Añadir malla de la estructura
     plotter.add_mesh(mesh, color="gray", line_width=2, label="Estructura")
 
-    # 5. Visualizar restricciones con simbología y colores mejorados
+    # 5. Resaltar puntos de medición (cubos magenta)
+    if highlight_coords:
+        added_cube_label = False
+        for coords in highlight_coords:
+            # Cubos magenta para puntos de medición de velocidad
+            cube_size = diag_length * 0.01
+            cube = pv.Cube(center=coords, x_length=cube_size, y_length=cube_size, z_length=cube_size)
+            if not added_cube_label:
+                plotter.add_mesh(cube, color="magenta", label="Puntos de Medición")
+                added_cube_label = True
+            else:
+                plotter.add_mesh(cube, color="magenta")
+
+    # 6. Resaltar nodos con masa
+    if mass_node_coords:
+        radius = diag_length * 0.018 # Un poco más grande para la masa
+        sphere = pv.Sphere(center=mass_node_coords[0], radius=radius)
+        plotter.add_mesh(sphere, color="#606060", label="Masa del Motor") # Gris oscuro
+
+    # 7. Visualizar restricciones
     if structure.constraints:
-        bounds = mesh.bounds
-        diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
-        if diag_length == 0: diag_length = 1.0
         symbol_scale = diag_length * 0.025
         offset_val = symbol_scale * 1
-
         added_labels = set()
 
         for node_index, dofs in structure.constraints.items():
@@ -64,17 +80,17 @@ def plot_structure_with_info(structure, title="Visualización de Estructura"):
                 plotter.add_mesh(symbol, color="#00a86b", label=label if label not in added_labels else None)
                 added_labels.add(label)
 
-    # 6. Añadir etiquetas de nodos con estilo limpio
-    node_labels = [str(i + 1) for i in range(len(structure.nodes))]
+    # 8. Añadir etiquetas de nodos
+    node_labels = [str(node.id) for node in structure.nodes]
     plotter.add_point_labels(points, node_labels, font_size=14, font_family="arial", text_color='#c400c4', shape=None, shadow=False)
 
-    # 7. Añadir ejes, leyenda y título
+    # 9. Añadir ejes, leyenda y título
     plotter.add_axes(xlabel="X", ylabel="Y", zlabel="Z")
     plotter.add_legend(bcolor="white")
     plotter.add_text(title, position="upper_edge", color="black", font_size=14, font="arial")
 
-    # 8. Activar iluminación avanzada
+    # 10. Activar iluminación avanzada
     plotter.enable_lightkit()
  
-    # 9. Mostrar
+    # 11. Mostrar
     plotter.show()

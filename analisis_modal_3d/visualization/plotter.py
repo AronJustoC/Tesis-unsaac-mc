@@ -6,7 +6,7 @@ import time
 def plot_mode_shape(
     structure,
     mode_vector,
-    deformation_scale=100,
+    deformation_scale=None,  # Default cambiado a None para activar la escala automática
     title="Visualización de modo",
 ):
     """
@@ -16,11 +16,22 @@ def plot_mode_shape(
     - Tipografía limpia (Arial) y composición mejorada.
     """
     # 1. Extraer puntos y líneas
-    points = np.array([node.coords for node in structure.nodes], dtype=float) # MODIFICADO: dtype=float
+    points = np.array([node.coords for node in structure.nodes], dtype=float)
     lines = np.array([[2, structure.nodes.index(e.nodes[0]), structure.nodes.index(e.nodes[1])] for e in structure.elements])
 
-    # 2. Crear mallas
+    # 2. Crear malla original
     original_mesh = pv.PolyData(points, lines=lines)
+
+    # 3. Lógica de escalado dinámico
+    if deformation_scale is None:
+        bounds = original_mesh.bounds
+        diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
+        if diag_length == 0: diag_length = 1.0
+        # La escala será un 20% de la diagonal del bounding box de la estructura
+        deformation_scale = diag_length * 0.1
+        print(f"  - Usando escala de deformación automática: {deformation_scale:.2f}")
+
+    # 4. Calcular puntos deformados
     deformed_points = np.copy(points)
     for i, node in enumerate(structure.nodes):
         dofs = node.dofs
@@ -30,15 +41,15 @@ def plot_mode_shape(
             deformed_points[i, 2] += mode_vector[dofs[2]] * deformation_scale
     deformed_mesh = pv.PolyData(deformed_points, lines=lines)
 
-    # 3. Configurar el plotter
+    # 5. Configurar el plotter
     plotter = pv.Plotter(window_size=(800, 700))
     plotter.set_background("white")
 
-    # 4. Añadir mallas con estilo profesional
+    # 6. Añadir mallas con estilo profesional
     plotter.add_mesh(original_mesh, color="gray", line_width=1, label="Original")
     plotter.add_mesh(deformed_mesh, color="#dc143c", style='wireframe', line_width=3, label="Modo")
 
-    # 5. Visualizar restricciones
+    # 7. Visualizar restricciones
     if structure.constraints:
         bounds = original_mesh.bounds
         diag_length = np.sqrt((bounds[1]-bounds[0])**2 + (bounds[3]-bounds[2])**2 + (bounds[5]-bounds[4])**2)
@@ -79,15 +90,15 @@ def plot_mode_shape(
                 plotter.add_mesh(symbol, color="#00a86b", label=label if label not in added_labels else None)
                 added_labels.add(label)
 
-    # 6. Añadir ejes, leyenda y título
+    # 8. Añadir ejes, leyenda y título
     plotter.add_axes(xlabel="X", ylabel="Y", zlabel="Z")
     plotter.add_legend(bcolor="white")
     plotter.add_text(title, position="upper_edge", color="black", font_size=12, font="arial")
 
-    # 7. Activar iluminación avanzada
+    # 9. Activar iluminación avanzada
     plotter.enable_lightkit()
 
-    # 8. Mostrar o guardar
+    # 10. Mostrar o guardar
     plotter.show(title=title)
 
 
@@ -127,7 +138,7 @@ def animate_mode_shape(
         
         # Set deformation_scale to be proportional to the structure's size
         # You might need to adjust the multiplier (e.g., 0.5) based on desired visual effect
-        deformation_scale = diag_length * 0.05 
+        deformation_scale = diag_length * 0.02 
 
     # Abrir el archivo GIF
     if filename:

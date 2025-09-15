@@ -1,21 +1,24 @@
 import os
 import sys
 import multiprocessing
+import numpy as np
+import matplotlib.pyplot as plt
 
 from analisis_modal_3d.analysis.modal import modal_analysis
 from analisis_modal_3d.structures.structure import Structure
 from analisis_modal_3d.analysis.assembler import assemble_global_matrices
 from analisis_modal_3d.visualization.plotter import plot_mode_shape, animate_mode_shape
 from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
+from analisis_modal_3d.analysis.damping import rayleigh_damping_matrix
+from analisis_modal_3d.analysis.frequency_response import direct_frequency_response
 
 # Global variables to store results
 structure = None
 freqs = None
 modes = None
-harmonic_displacement_history = None # Not used in this example, but kept for consistency
 
 def run_example():
-    global structure, freqs, modes, harmonic_displacement_history
+    global structure, freqs, modes
 
     structure = Structure()
 
@@ -24,17 +27,22 @@ def run_example():
         "ASTM-A36": {
             "E": 200e9,  # Módulo de elasticidad (Pa)
             "G": 77e9,  # Módulo de corte (Pa)
-            "rho": 7950 #7850,  # Densidad (kg/m³)
+            "rho": 7850 #7850,  # Densidad (kg/m³)
         },
         "ASTM-A36+": {
-            "E": 200e9,  # Módulo de elasticidad (Pa)
+            "E": 200e9,#*0.6,  # Módulo de elasticidad (Pa)
             "G": 77e9,  # Módulo de corte (Pa)
             "rho": 7850# * 7.13,  # Densidad (kg/m³)
         },
         "ASTM-A36_modificado": {
-            "E": 200e9*1,
+            "E": 200e9*0.6,
             "G": 77e9,
-            "rho": 7950,
+            "rho": 7850,
+        },
+        "MOTOR_LINK": {
+            "E": 200e9 * 1000,  # Rigidez muy alta
+            "G": 77e9 * 1000,
+            "rho": 0.0,  # Sin masa
         },
     }
 
@@ -232,23 +240,22 @@ def run_example():
         (160, 1525, 570, 0),
         (161, 1830, 570, 0),
         (162, 2135, 570, 0),
+        (163, 1067.5, 250, 80)
     ]:
         node_id = row[0]
         coords = (row[1] / 1000, row[2] / 1000, row[3] / 1000)  # Conversión mm -> m
         node_coords[node_id] = structure.add_node(*coords)
 
-    # Asignación de masa puntual a nodos específicos
-    mass_nodes_ids = [31, 36, 41, 112, 117, 122]
+    # Asignación de masa puntual del motor al nodo central
     total_mass = 10.0
-    mass_per_node = total_mass / len(mass_nodes_ids)
+    motor_mass_node_id = 163
 
-    for node_id in mass_nodes_ids:
-        if node_id in node_coords:
-            node = node_coords[node_id]
-            node.mass += mass_per_node
-            print(f"Añadida masa de {mass_per_node:.4f} kg al nodo {node.id}")
-        else:
-            print(f"Advertencia: Nodo con ID {node_id} no encontrado en la estructura.")
+    if motor_mass_node_id in node_coords:
+        node = node_coords[motor_mass_node_id]
+        node.mass += total_mass
+        print(f"Añadida masa de {total_mass:.4f} kg al nodo {node.id}")
+    else:
+        print(f"Advertencia: Nodo con ID {motor_mass_node_id} no encontrado en la estructura.")
 
     # ========== Agregar elementos ==========
     elements = [
@@ -591,6 +598,11 @@ def run_example():
         (61, 152, "80x40", "ASTM-A36"),
         (71, 142, "80x40", "ASTM-A36"),
         (71, 152, "H420x180", "ASTM-A36"),
+# Elementos que unen la estructura al nodo del puente 
+        (31, 163, "H420x180", "MOTOR_LINK"),
+        (41, 163, "H420x180", "MOTOR_LINK"),
+        (112, 163, "H420x180", "MOTOR_LINK"),
+        (122, 163, "H420x180", "MOTOR_LINK"),
     ]
 
     for el in elements:
@@ -615,7 +627,7 @@ def run_example():
           1: ["ux", "uy", "uz", "rx", "rz"],
         82: ["ux", "uy", "uz", "rx", "rz"],
         71: ["uy", "uz"],
-        152: ["uy","uz"],
+        152: ["uy"],
           }
 
     for node_id, dofs in constraints.items():
@@ -623,104 +635,156 @@ def run_example():
 
 
     # Plot the structure with info
-    plot_structure_with_info(structure, title="Estructura Bailey Escalado con Pasadores")
+    nodes_of_interest = [21, 23, 31, 33, 41, 43, 51, 53, 102, 104, 112, 114, 122, 124, 132, 134]
+    coords_to_highlight = [node_coords[node_id].coords for node_id in nodes_of_interest if node_id in node_coords]
+    
+    motor_mass_node_id = 163
+    mass_coords = [node_coords[motor_mass_node_id].coords] if motor_mass_node_id in node_coords else None
 
-    # ========== Análisis Modal con parámetros robustos ==========
+    plot_structure_with_info(
+        structure, 
+        title="Estructura Bailey Escalado con Pasadores", 
+        highlight_coords=coords_to_highlight,
+        highlight_label="Nodos de Medición (Velocidad)",
+        mass_node_coords=mass_coords
+    )
+
+    # ========== Análisis Modal (necesario para amortiguamiento) ==========
+    print("\nRealizando análisis modal...")
+    K, M = assemble_global_matrices(structure)
     try:
-        K, M = assemble_global_matrices(structure)
-        # Usar shift-invert para evitar matrices singulares
-        freqs, modes = modal_analysis(
-            K,
-            M,
-            structure,
-            num_modes=30,
-        )
-        print("\nFrequencias Naturales:")
-        print("-" * 15)
-        for i, freq in enumerate(freqs, 1):
-            print(f"Mode {i}: {freq:.2f} Hz")
+        freqs, modes, mass_participation = modal_analysis(K, M, structure, num_modes=30)
+        print(f"Primeras 10 frecuencias naturales (Hz): {freqs[:10]}")
+        print("\nFactores de participación de masa (%):")
+        print("Modo | Frec (Hz) | X    | Y    | Z")
+        print("------------------------------------")
+        for i in range(len(freqs)):
+            print(f"{i+1:<4} | {freqs[i]:<9.2f} | {mass_participation[i, 0]:<4.2f} | {mass_participation[i, 1]:<4.2f} | {mass_participation[i, 2]:<4.2f}")
 
-        # Preguntar al usuario cuántos modos visualizar
-        while True:
+        # ========== Visualización Interactiva de Modos de Vibración ==========
+        print("\nVisualización interactiva de los primeros 5 modos de vibración.")
+        print("NOTA: Cierre la ventana del gráfico para que el script continúe con el siguiente modo.")
+
+        for i in range(10):
+            freq = freqs[i]
+            mode_vector = modes[:, i]
+            title = f"Modo de Vibración {i+1} ({freq:.2f} Hz)"
+            
+            print(f"\nMostrando gráfico interactivo para el Modo {i+1}...")
+            
             try:
-                num_modes_to_plot_str = input(f"\nIngrese el número de modos a visualizar (1-{len(freqs)}) o 't' para todos: ")
-                if num_modes_to_plot_str.lower() == 't':
-                    num_modes_to_plot = len(freqs)
-                    break
-                num_modes_to_plot = int(num_modes_to_plot_str)
-                if 1 <= num_modes_to_plot <= len(freqs):
-                    break
-                else:
-                    print("Número de modos inválido. Intente de nuevo.")
-            except ValueError:
-                print("Entrada inválida. Por favor, ingrese un número o 't'.")
-
-        # Preguntar por el factor de escala de deformación
-        while True:
-            try:
-                deformation_scale = float(input("Ingrese el factor de escala de deformación (e.g., 0.1): "))
-                break
-            except ValueError:
-                print("Entrada inválida. Por favor, ingrese un número decimal.")
-
-        # --- Visualización de Modos en Procesos Separados ---
-        plot_processes = []
-        print("\nLanzando ventanas de visualización de modos. Cierre cada ventana para continuar.")
-
-        for i in range(num_modes_to_plot):
-            title = f"Modo {i + 1} - {freqs[i]:.2f} Hz"
-            # Crear un proceso para cada ventana de ploteo
-            plot_process = multiprocessing.Process(
-                target=plot_mode_shape,
-                args=(structure, modes[:, i]),
-                kwargs={"title": title, "deformation_scale": deformation_scale}
-            )
-            plot_processes.append(plot_process)
-            plot_process.start()
-
-        # Esperar a que todos los procesos de ploteo terminen (ventanas cerradas)
-        for p in plot_processes:
-            p.join()
-
-        # Preguntar si desea generar un GIF de un modo
-        while True:
-            generate_gif_choice = input("\n¿Desea generar un GIF de un modo de vibración? (s/n): ").lower()
-            if generate_gif_choice == 's':
-                while True:
-                    try:
-                        gif_mode_index = int(input(f"Ingrese el número del modo para el GIF (1-{len(freqs)}): ")) - 1
-                        if 0 <= gif_mode_index < len(freqs):
-                            break
-                        else:
-                            print("Número de modo inválido. Intente de nuevo.")
-                    except ValueError:
-                        print("Entrada inválida. Por favor, ingrese un número.")
-
-                while True:
-                    try:
-                        gif_deformation_scale = float(input("Ingrese el factor de escala de deformación para el GIF (e.g., 0.1): "))
-                        break
-                    except ValueError:
-                        print("Entrada inválida. Por favor, ingrese un número decimal.")
-
-                gif_output_filename = input("Ingrese el nombre del archivo GIF de salida (ej. modo_1.gif): ")
-                
-                print(f"Generando GIF para el modo {gif_mode_index + 1}...")
-                animate_mode_shape(
+                plot_mode_shape(
                     structure=structure,
-                    mode_vector=modes[:, gif_mode_index],
-                    deformation_scale=gif_deformation_scale,
-                    title=f"Modo {gif_mode_index + 1} - {freqs[gif_mode_index]:.2f} Hz",
-                    filename=gif_output_filename
+                    mode_vector=mode_vector,
+                    title=title
                 )
-                print(f"GIF guardado en: {gif_output_filename}")
-            elif generate_gif_choice == 'n':
-                break
-            else:
-                print("Opción inválida. Por favor, ingrese 's' o 'n'.")
+            except Exception as e:
+                print(f"  No se pudo mostrar el gráfico interactivo. Error: {e}")
+                print("  Esto puede ocurrir si no se está ejecutando en un entorno con soporte de GUI.")
+                break # Salir del bucle si falla una vez
 
+        print("\nVisualización de modos completada.")
     except Exception as e:
-        print(f"Error en el análisis: {str(e)}")
+        print(f"Error durante el análisis modal: {e}")
+        return # Salir si el análisis modal falla
+
+    # ========== Definición del Amortiguamiento de Rayleigh ==========
+    print("\nCalculando coeficientes de amortiguamiento...")
+    
+    zeta_target = 0.02  # 2% de amortiguamiento
+    mode_i, mode_j = 0, 2 # Usar el primer y tercer modo
+    freqs_rad = freqs * 2 * np.pi
+    
+    A = np.array([
+        [1, freqs_rad[mode_i]**2],
+        [1, freqs_rad[mode_j]**2]
+    ])
+    B = np.array([
+        2 * zeta_target * freqs_rad[mode_i],
+        2 * zeta_target * freqs_rad[mode_j]
+    ])
+    alpha, beta = np.linalg.solve(A, B)
+    C = rayleigh_damping_matrix(M, K, alpha, beta)
+    print(f"Coeficientes calculados: alpha={alpha:.4f}, beta={beta:.6f}")
+
+    # ========== Definición de la Carga y Análisis Armónico ==========
+    print("\nDefiniendo la carga del motor y el análisis armónico...")
+    motor_node_id = 163
+    motor_node_index = motor_node_id - 1
+    m_unbal = 0.1  # kg (100 gr)
+    e_mm = 50.8  # mm
+    e_m = e_mm / 1000  # m
+    unbalanced_mass_product = m_unbal * e_m  # kg*m
+
+    num_dofs = K.shape[0]
+    F_direction = np.zeros(num_dofs, dtype=np.complex128)
+
+    # Fuerza en dirección Z (componente real)
+    force_dof_z = motor_node_index * 6 + 2
+    F_direction[force_dof_z] = 1.0
+
+    # Fuerza en dirección Y (componente imaginaria, desfasada 90 grados)
+    force_dof_y = motor_node_index * 6 + 1
+    F_direction[force_dof_y] = 1.0j
+
+    # Frecuencias específicas para el análisis
+    freq_range_hz = np.array([15, 20, 26, 30, 40])
+
+    print(f"\nEjecutando el análisis de respuesta en frecuencia para: {freq_range_hz} Hz...")
+    complex_displacements = direct_frequency_response(
+        K=K, M=M, C=C,
+        force_vector_amplitude=F_direction,
+        frequency_range_hz=freq_range_hz,
+        is_unbalanced_force=True,
+        unbalanced_mass_product=unbalanced_mass_product
+    )
+
+    # ========== Post-procesamiento y Resultados ==========
+    print("\nProcesando y mostrando resultados...")
+
+    # --- Generación de Tablas de Velocidad ---
+    
+    nodes_of_interest_real = [21, 23, 31, 33, 41, 43, 51, 53, 102, 104, 112, 114, 122, 124, 132, 134]
+    nodes_of_interest = [ nodo - 1 for nodo in nodes_of_interest_real]
+    freqs_of_interest_hz = [15, 20, 26, 30, 40]
+
+    for i, f_target in enumerate(freqs_of_interest_hz):
+        omega = 2 * np.pi * f_target
+
+        # Extraer desplazamientos complejos para esta frecuencia
+        U_complex = complex_displacements[i, :]
+
+        # Calcular velocidades complejas: V = i*ω*U
+        V_complex = 1j * omega * U_complex
+
+        # Calcular amplitudes de velocidad en mm/s
+        V_peak_mmps = np.abs(V_complex) * 1000
+        V_rms_mmps = V_peak_mmps / np.sqrt(2)
+
+        # Imprimir la cabecera de la tabla para esta frecuencia
+        print(f"\nVELOCIDADES DE VIBRACIÓN A {f_target:.0f} Hz")
+        print("{:<5} {:^18} {:^18}".format("Punto", "Vrms [mm/s]", "Vpk [mm/s]"))
+        print("{:<5} {:^6} {:^6} {:^6} {:^6} {:^6} {:^6}".format("", "X", "Y", "Z", "X", "Y", "Z"))
+        print("-" * 43)
+
+        # Imprimir los resultados para cada nodo de interés
+        for j, node_id in enumerate(nodes_of_interest):
+            punto = j + 1
+            node_idx_corrected = node_id - 1
+            dof_x = node_idx_corrected * 6 + 0
+            dof_y = node_idx_corrected * 6 + 1
+            dof_z = node_idx_corrected * 6 + 2
+
+            # Extraer valores
+            vrms_vals = [V_rms_mmps[dof_x], V_rms_mmps[dof_y], V_rms_mmps[dof_z]]
+            vpk_vals = [V_peak_mmps[dof_x], V_peak_mmps[dof_y], V_peak_mmps[dof_z]]
+
+            print("{:<5} {:>6.2f} {:>6.2f} {:>6.2f} {:>6.2f} {:>6.2f} {:>6.2f}".format(
+                punto,
+                vrms_vals[0], vrms_vals[1], vrms_vals[2],
+                vpk_vals[0], vpk_vals[1], vpk_vals[2]
+            ))
+
 
 # Call run_example directly when the module is imported
 run_example()

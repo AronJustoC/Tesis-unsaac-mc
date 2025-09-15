@@ -8,10 +8,7 @@ def modal_analysis(
     structure: "Structure",
     num_modes=6,
 ):
-    """Realiza un análisis modal usando un solucionador de valores propios denso.
-
-    Este método es robusto y calcula todos los modos posibles, devolviendo los
-    primeros `num_modes`.
+    """Realiza un análisis modal y calcula los factores de participación de masa.
 
     Args:
         K (np.ndarray): Matriz de rigidez global.
@@ -20,44 +17,64 @@ def modal_analysis(
         num_modes (int): Número de modos a calcular.
 
     Returns:
-        tuple[np.ndarray, np.ndarray]: Tupla con las frecuencias (Hz) y las formas modales.
+        tuple[np.ndarray, np.ndarray, np.ndarray]: Frecuencias (Hz), 
+                                                   formas modales y 
+                                                   factores de participación de masa (%).
     """
-    # Obtener los grados de libertad restringidos
+    num_dofs = K.shape[0]
     constrained_dofs = structure.get_constrained_dofs()
-    free_dofs = np.setdiff1d(np.arange(K.shape[0]), constrained_dofs)
+    free_dofs = np.setdiff1d(np.arange(num_dofs), constrained_dofs)
 
-    # Extraer submatrices para los grados de libertad libres
-    # y convertirlas a formato denso para el solucionador eigh.
     try:
         K_red_dense = K[free_dofs, :][:, free_dofs].toarray()
         M_red_dense = M[free_dofs, :][:, free_dofs].toarray()
     except AttributeError:
-        # Las matrices ya son densas
         K_red_dense = K[free_dofs, :][:, free_dofs]
         M_red_dense = M[free_dofs, :][:, free_dofs]
 
-    # Resolver el problema de valores propios generalizado: K*v = w^2*M*v
-    # eigh es para matrices hermitianas y devuelve los valores propios en orden ascendente.
-    # Se añade una pequeña cantidad a la diagonal de la matriz de masa para asegurar que sea positiva definida.
     M_red_dense += np.eye(M_red_dense.shape[0]) * 1e-6
     eigvals, eigvecs_red = eigh(K_red_dense, M_red_dense)
 
-    # Tomar el número de modos solicitado (los más bajos)
     eigvals = eigvals[:num_modes]
     eigvecs_red = eigvecs_red[:, :num_modes]
 
-    # Reconstruir los vectores propios en el tamaño original de la estructura
-    mode_shapes = np.zeros((K.shape[0], num_modes))
+    mode_shapes = np.zeros((num_dofs, num_modes))
     mode_shapes[free_dofs, :] = eigvecs_red
 
-    # Normalizar los modos (opcional, pero buena práctica)
+    # Normalización de masa modal a 1 (M_modal = I)
     for i in range(num_modes):
-        norm = np.linalg.norm(mode_shapes[:, i])
-        if norm > 1e-9:
-            mode_shapes[:, i] /= norm
+        phi_i = mode_shapes[:, i]
+        m_modal = phi_i.T @ M @ phi_i
+        if m_modal > 1e-9:
+            mode_shapes[:, i] /= np.sqrt(m_modal)
 
-    # Calcular frecuencias en Hz desde los valores propios (w^2)
-    # Se manejan valores propios negativos pequeños que pueden surgir de errores numéricos
     frequencies = np.sqrt(np.maximum(eigvals, 0)) / (2 * np.pi)
 
-    return frequencies, mode_shapes
+    # --- Cálculo de Participación de Masa ---
+    mass_participation = np.zeros((num_modes, 3)) # X, Y, Z
+    
+    # 1. Vector de influencia (R)
+    R = np.zeros((num_dofs, 3))
+    R[0::6, 0] = 1 # Dirección X
+    R[1::6, 1] = 1 # Dirección Y
+    R[2::6, 2] = 1 # Dirección Z
+
+    # 2. Masa total en cada dirección
+    M_diag = M.diagonal()
+    total_mass_X = np.sum(M_diag[0::6])
+    total_mass_Y = np.sum(M_diag[1::6])
+    total_mass_Z = np.sum(M_diag[2::6])
+    total_mass_vector = np.array([total_mass_X, total_mass_Y, total_mass_Z])
+
+    # 3. Factor de participación modal (L)
+    L = mode_shapes.T @ M @ R # Shape: (num_modes, 3)
+
+    # 4. Masa modal efectiva (M_eff = L^2, ya que M_modal es 1)
+    effective_modal_mass = L**2
+
+    # 5. Porcentaje de participación
+    for i in range(3):
+        if total_mass_vector[i] > 1e-9:
+            mass_participation[:, i] = (effective_modal_mass[:, i] / total_mass_vector[i]) * 100
+
+    return frequencies, mode_shapes, mass_participation

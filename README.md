@@ -432,3 +432,44 @@ Project Link: <https://github.com/usuario/analisis-modal-3d>
 1. Bathe, K.J. (1996). Finite Element Procedures
 2. Cook, R.D. (2001). Concepts and Applications of Finite Element Analysis
 3. Zienkiewicz, O.C. (2000). The Finite Element Method
+
+### 3.8 Cálculo de la Participación de Masa
+
+El factor de participación de la masa modal (MPF) es un indicador clave en el análisis dinámico y sísmico. Mide cuánta de la masa total del sistema participa en cada modo de vibración y en qué dirección. Esto es crucial para entender cómo una estructura responderá a excitaciones externas, como un terremoto o una carga vibratoria.
+
+El cálculo se realiza de la siguiente manera:
+
+1.  **Vector de Influencia (R)**: Este vector relaciona los grados de libertad (GDL) del sistema con las tres direcciones globales (X, Y, Z). Para un sistema con 6 GDL por nodo (3 traslaciones y 3 rotaciones), el vector de influencia se construye asignando un valor de 1 a los GDL de traslación en cada dirección.
+
+    *   `R` es una matriz de tamaño `(N, 3)`, donde `N` es el número total de GDL.
+    *   La primera columna corresponde a la dirección X, la segunda a Y y la tercera a Z.
+    *   Para la dirección X, los elementos de `R` correspondientes a los GDL `ux` (0, 6, 12, ...) se establecen en 1.
+    *   Se aplica un enfoque similar para las direcciones Y y Z.
+
+2.  **Masa Modal Generalizada (M_modal)**: Para cada modo `i`, la masa modal generalizada se calcula como:
+    $$ 
+    M_{modal, i} = \{\phi_i\}^T [M] \{\phi_i\} 
+    $$ 
+    Donde `{\phi_i}` es el vector del modo (forma modal) y `[M]` es la matriz de masa global. En este proyecto, los modos se normalizan de tal manera que `M_modal` es igual a la matriz identidad, simplificando los cálculos posteriores.
+
+3.  **Factor de Participación Modal (L)**: Este factor cuantifica la "excitabilidad" de cada modo por un movimiento en una dirección específica. Se calcula como:
+    $$ 
+    L_i = \{\phi_i\}^T [M] R 
+    $$ 
+    El resultado `L_i` es un vector de 3 componentes `(L_ix, L_iy, L_iz)`, que indica cómo el modo `i` es activado por un movimiento en las direcciones X, Y y Z, respectivamente.
+
+4.  **Masa Modal Efectiva (M_eff)**: Representa la porción de la masa total que se mueve con cada modo de vibración. Se calcula elevando al cuadrado el factor de participación modal:
+    $$ 
+    M_{eff, i} = L_i^2 
+    $$ 
+    Como `L_i` es un vector, esta operación se realiza por componentes, resultando en `(L_ix^2, L_iy^2, L_iz^2)`.
+
+5.  **Porcentaje de Participación de Masa**: Finalmente, para obtener un valor porcentual que sea fácil de interpretar, la masa modal efectiva de cada modo se divide por la masa total de la estructura en la dirección correspondiente:
+    $$ 
+    \%MPF_{ix} = \frac{M_{eff, ix}}{M_{total, x}} \times 100\% 
+    $$ 
+    Este valor indica qué porcentaje de la masa total en la dirección X participa en el modo `i`. Se repite el cálculo para las direcciones Y y Z.
+
+La suma de los porcentajes de participación de masa en todas las direcciones para todos los modos debe aproximarse al 100%. En la práctica, se busca que la suma de los modos considerados alcance al menos el 90% de la masa total para asegurar que la respuesta dinámica esté bien representada.
+
+```

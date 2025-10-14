@@ -133,3 +133,28 @@ class Element:
     def _compute_global_mass(self):
         """Transforma la matriz de masa local a coordenadas globales."""
         self.m_global = self.T.T @ self.m_local @ self.T
+
+    def get_axial_force(self, global_displacements):
+        """
+        Calcula la fuerza axial en el elemento a partir de los desplazamientos globales.
+        """
+        # Obtener los grados de libertad globales de los nodos del elemento
+        dofs_node1 = self.nodes[0].dofs
+        dofs_node2 = self.nodes[1].dofs
+        
+        # Extraer los desplazamientos globales de los nodos del elemento
+        element_global_displacements = np.zeros(12)
+        for i in range(6):
+            element_global_displacements[i] = global_displacements[dofs_node1[i]]
+            element_global_displacements[i+6] = global_displacements[dofs_node2[i]]
+
+        # Transformar los desplazamientos globales a locales
+        element_local_displacements = self.T @ element_global_displacements
+
+        # Calcular las fuerzas locales (f = k_local * u_local)
+        local_forces = self.k_local @ element_local_displacements
+
+        # La fuerza axial es la primera componente del vector de fuerzas locales
+        # (fuerza en dirección X local del elemento)
+        axial_force = local_forces[0]
+        return axial_force

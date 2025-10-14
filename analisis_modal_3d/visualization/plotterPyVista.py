@@ -10,7 +10,9 @@ def animate_harmonic_response(
     displacement_history: np.ndarray,
     output_filename: str = "graficos_resultados/harmonic_animation.gif",
     scale_factor: float = 30.0,
-    n_frames: int = 100
+    n_frames: int = 100,
+    show_interactive: bool = False,
+    force_frequency_hz: float = None
 ):
     """
     Crea una animación GIF de la respuesta armónica de la estructura.
@@ -21,6 +23,8 @@ def animate_harmonic_response(
         output_filename (str): Nombre del archivo GIF de salida.
         scale_factor (float): Factor para escalar las deformaciones y hacerlas visibles.
         n_frames (int): Número de fotogramas para la animación.
+        show_interactive (bool): Si es True, muestra una ventana interactiva con el último fotograma.
+        force_frequency_hz (float, optional): Frecuencia de la fuerza aplicada en Hz. Se mostrará en la visualización.
     """
     print("Iniciando la creación de la animación 3D con PyVista...")
 
@@ -35,12 +39,16 @@ def animate_harmonic_response(
     undeformed_mesh = pv.PolyData(points, lines=lines)
 
     # 2. Configurar el plotter de PyVista
-    plotter = pv.Plotter(off_screen=True) # off_screen para evitar ventanas emergentes
+    plotter = pv.Plotter(off_screen=not show_interactive) # off_screen se controla con show_interactive
     plotter.add_mesh(undeformed_mesh, style='wireframe', color='gray', line_width=2, label='Original')
     
     # Actor para la malla deformada que se actualizará
     deformed_actor = plotter.add_mesh(undeformed_mesh.copy(), color='dodgerblue', line_width=5, label='Deformada')
     plotter.add_legend()
+
+    # Añadir la frecuencia de la fuerza si se proporciona
+    if force_frequency_hz is not None:
+        plotter.add_text(f"Frecuencia de Fuerza: {force_frequency_hz:.2f} Hz", position="lower_left", font_size=10, color="black")
 
     # 3. Crear la animación
     print(f"Generando animación en: {output_filename}")
@@ -67,5 +75,10 @@ def animate_harmonic_response(
         plotter.update_coordinates(deformed_points, mesh=deformed_actor.mapper.dataset)
         plotter.write_frame()
 
-    plotter.close()
     print("\nAnimación 3D completada.")
+
+    if show_interactive:
+        print("Mostrando ventana interactiva con el último fotograma...")
+        plotter.show() # This will block until the user closes the window
+    else:
+        plotter.close() # Only close if not showing interactively

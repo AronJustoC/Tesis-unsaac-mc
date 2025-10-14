@@ -47,4 +47,19 @@ def assemble_global_matrices(structure: Structure):
                 dof_index = node.dofs[i]
                 M[dof_index, dof_index] += node.mass
 
-    return K, M  # Matrices completas (sin eliminar restricciones)
+    print("DEBUG: M diagonal after mass addition (first 100 elements):")
+    print(M.diagonal()[:100])
+
+    # Aplicar restricciones (Penalty Method)
+    # Un valor grande para la penalización
+    penalty_value = 1e12 * np.max(np.abs(K)) # Basado en la rigidez máxima
+    if penalty_value == 0: penalty_value = 1e12 # Evitar cero si K es cero
+
+    for node_index, local_dofs_constrained in structure.constraints.items():
+        node_obj = structure.nodes[node_index]
+        for dof_local_index in local_dofs_constrained:
+            dof_global_index = node_obj.dofs[dof_local_index]
+            K[dof_global_index, dof_global_index] += penalty_value
+            M[dof_global_index, dof_global_index] += penalty_value # También penalizar la masa para evitar problemas numéricos
+
+    return K, M

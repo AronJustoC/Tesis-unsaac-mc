@@ -77,4 +77,7 @@ def modal_analysis(
         if total_mass_vector[i] > 1e-9:
             mass_participation[:, i] = (effective_modal_mass[:, i] / total_mass_vector[i]) * 100
 
+    print(f"DEBUG: mass_participation shape: {mass_participation.shape}")
+    print(f"DEBUG: mass_participation (first 5 modes):\n{mass_participation[:5]}")
+
     return frequencies, mode_shapes, mass_participation

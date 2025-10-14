@@ -13,6 +13,15 @@ class Structure:
         self.elements = []
         self.num_dofs = 0
         self.constraints = {}  # Dictionary to store node constraints
+        # Map DOF names to indices
+        self.dof_map = {
+            "ux": 0,
+            "uy": 1,
+            "uz": 2,  # translations
+            "rx": 3,
+            "ry": 4,
+            "rz": 5,  # rotations
+        }
 
     def add_node(self, x, y, z):
         """Añade un nuevo nodo a la estructura.
@@ -65,24 +74,14 @@ class Structure:
         if node not in self.nodes:
             raise ValueError("Node is not part of the structure")
 
-        # Map DOF names to indices
-        dof_map = {
-            "ux": 0,
-            "uy": 1,
-            "uz": 2,  # translations
-            "rx": 3,
-            "ry": 4,
-            "rz": 5,  # rotations
-        }
-
         # Validate DOF names
         for dof in constrained_dofs:
-            if dof not in dof_map:
+            if dof not in self.dof_map:
                 raise ValueError(f"Invalid DOF name: {dof}")
 
         # Store constraint indices for this node
         node_index = self.nodes.index(node)
-        constrained_indices = [dof_map[dof] for dof in constrained_dofs]
+        constrained_indices = [self.dof_map[dof] for dof in constrained_dofs]
         self.constraints[node_index] = constrained_indices
 
     def get_global_dof_index(self, node_index: int, local_dof: int) -> int:

@@ -62,13 +62,13 @@ def visualize_mode_shapes(structure, freqs, modes, num_modes_to_plot=5):
             break
     print("\nVisualización de modos completada.")
 
-def print_velocity_tables(complex_displacements, freqs_of_interest_hz, nodes_of_interest_ids):
+def print_velocity_tables(complex_displacements, freqs_of_interest_hz, nodes_of_interest_indices, structure):
     """
     Calcula e imprime las tablas de velocidades (RMS y Pico).
     """
     print("\n--- Resultados de Respuesta en Frecuencia (Velocidad) ---")
     
-    node_indices = [node_id - 1 for node_id in nodes_of_interest_ids]
+    node_id_map = {i: node.id for i, node in enumerate(structure.nodes)}
 
     for i, f_target in enumerate(freqs_of_interest_hz):
         omega = 2 * np.pi * f_target
@@ -83,10 +83,9 @@ def print_velocity_tables(complex_displacements, freqs_of_interest_hz, nodes_of_
         print("{:<5} {:^6} {:^6} {:^6} {:^6} {:^6} {:^6}".format("", "X", "Y", "Z", "X", "Y", "Z"))
         print("-" * 70)
 
-        for node_id in nodes_of_interest_ids:
-            # Los DOFs son 0-indexed para ux, uy, uz, rx, ry, rz
-            # Asumimos que los nodos de interés son 1-indexed en el input_data
-            node_base_dof = (node_id - 1) * 6
+        for node_index in nodes_of_interest_indices:
+            node_base_dof = node_index * 6
+            node_id = node_id_map.get(node_index, node_index + 1)
             
             # Extraer valores para X, Y, Z traslación
             vrms_vals = [

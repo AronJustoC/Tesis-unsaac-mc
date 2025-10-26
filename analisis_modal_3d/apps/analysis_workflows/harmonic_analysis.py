@@ -11,7 +11,7 @@ from analisis_modal_3d.analysis.frequency_response import direct_frequency_respo
 from analisis_modal_3d.visualization.results_processor import (
     print_velocity_tables
 )
-from analisis_modal_3d.visualization.static_plotter import plot_deformed_structure
+from analisis_modal_3d.visualization.static_plotter import plot_response_with_labels
 
 
 def run(data_file_path):
@@ -50,8 +50,7 @@ def run(data_file_path):
                  2 * zeta_target * freqs_rad[mode_j]])
     alpha, beta = np.linalg.solve(A, B)
     C = rayleigh_damping_matrix(M, K, alpha, beta)
-    print(f"Coeficientes de amortiguamiento: alpha={
-          alpha:.4f}, beta={beta:.6f}")
+    print(f"Coeficientes de amortiguamiento: alpha={alpha:.4f}, beta={beta:.6f}")
 
     # Definición de la fuerza desbalanceada del motor
     freq_resp_settings = settings['frequency_response']
@@ -80,44 +79,61 @@ def run(data_file_path):
     ).T  # Transponer para que sea (num_dofs, num_frequencies)
 
     # 4. POST-PROCESAMIENTO DE RESULTADOS
-    nodes_of_interest = settings['post_processing']['nodes_of_interest']
+    nodes_of_interest_ids = settings['post_processing']['nodes_of_interest']
+    nodes_of_interest_indices = [n - 1 for n in nodes_of_interest_ids]
+
     print_velocity_tables(complex_displacements,
-                          freq_range_hz, nodes_of_interest)
+                          freq_range_hz, nodes_of_interest_indices, structure)
 
-    # Visualización de la deformación para todas las frecuencias
-    print("\nVisualizando deformaciones para cada frecuencia...")
+    # 5. VISUALIZACIÓN DE LA VELOCIDAD VRMS PARA CADA FRECUENCIA
+    print("\nVisualizando la velocidad VRMS para cada frecuencia...")
+
+    all_coords = np.array([node.coords for node in structure.nodes])
+    structure_length = np.max(
+        np.max(all_coords, axis=0) - np.min(all_coords, axis=0))
+    target_visual_ratio = 0.10  # 10% de la longitud de la estructura
+
     for i, freq in enumerate(freq_range_hz):
-        displacement_for_freq = complex_displacements[:, i]
+        omega = 2 * np.pi * freq
+        displacements_for_freq = complex_displacements[:, i]
+        velocities_complex = 1j * omega * displacements_for_freq
 
-        # Calcular un factor de escala adaptativo para la visualización de esta frecuencia
-        max_disp_amplitude_for_freq = np.max(np.abs(displacement_for_freq))
+        amplitudes_for_freq = np.abs(displacements_for_freq)
+        max_disp_amplitude = np.max(amplitudes_for_freq)
 
-        all_coords = np.array([node.coords for node in structure.nodes])
-        max_dim = np.max(all_coords, axis=0)
-        min_dim = np.min(all_coords, axis=0)
-        # La dimensión más larga de la estructura
-        structure_length = np.max(max_dim - min_dim)
-
-        # Queremos que la deformación máxima sea el 5% de la longitud de la estructura
-        target_visual_ratio = 0.05
-        # Evitar división por cero o escalado infinito para deformaciones muy pequeñas
-        if max_disp_amplitude_for_freq > 1e-9:
+        if max_disp_amplitude > 1e-9:
             adaptive_scale_factor = (
-                structure_length * target_visual_ratio) / max_disp_amplitude_for_freq
+                structure_length * target_visual_ratio) / max_disp_amplitude
             adaptive_scale_factor = min(adaptive_scale_factor, 1000.0)
         else:
-            adaptive_scale_factor = 0.0  # No hay deformación, no escalar
+            adaptive_scale_factor = 0.0
 
-        print(f"  - Frecuencia: {freq:.2f} Hz, Amplitud Máxima: {
-              max_disp_amplitude_for_freq:.6e} m, Factor de Escala: {adaptive_scale_factor:.2f}")
+        # Crear etiquetas de velocidad VRMS para los nodos de interés
+        node_labels = {}
+        for node_index in nodes_of_interest_indices:
+            # Velocidades complejas para los GDL de traslación del nodo
+            vx = velocities_complex[node_index * 6 + 0]
+            vy = velocities_complex[node_index * 6 + 1]
+            vz = velocities_complex[node_index * 6 + 2]
 
-        plot_deformed_structure(
+            # Calcular Vpk y Vrms en mm/s
+            v_pk_xyz = np.abs([vx, vy, vz]) * 1000  # a mm/s
+            v_rms_xyz = v_pk_xyz / np.sqrt(2)
+
+            label = f"Vrms (mm/s):\n  X: {v_rms_xyz[0]:.2f}\n  Y: {v_rms_xyz[1]:.2f}\n  Z: {v_rms_xyz[2]:.2f}"
+            node_labels[node_index] = label
+
+        print(f"\nFrecuencia: {freq:.2f} Hz")
+        print(
+            f"  - Factor de Escala de Visualización: {adaptive_scale_factor:.2f}")
+
+        plot_response_with_labels(
             structure,
-            # Usar la parte real para la visualización estática
-            np.real(displacement_for_freq),
+            displacements=displacements_for_freq,
+            node_labels=node_labels,
+            nodes_of_interest=nodes_of_interest_indices,
             scale_factor=adaptive_scale_factor,
-            title=f"Deformación en {freq:.2f} Hz",
-            mass_node_id=mass_node_id
+            title=f"Velocidad VRMS a {freq:.2f} Hz"
         )
 
     print("\nFlujo de trabajo completado.")

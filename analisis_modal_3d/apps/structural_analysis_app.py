@@ -1,5 +1,6 @@
 
 
+from analisis_modal_3d.apps.analysis_workflows import static_analysis, modal_analysis, harmonic_analysis
 import sys
 import os
 
@@ -10,7 +11,6 @@ project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from analisis_modal_3d.apps.analysis_workflows import static_analysis, modal_analysis, harmonic_analysis
 
 def main_menu():
     """
@@ -50,6 +50,6 @@ def main_menu():
         else:
             print("Opción no válida. Por favor, intente de nuevo.")
 
+
 if __name__ == "__main__":
     main_menu()
-

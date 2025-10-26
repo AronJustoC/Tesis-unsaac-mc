@@ -29,17 +29,17 @@ def get_structure_data():
             "ASTM-A36": {
                 "E": 200e9,  # Módulo de elasticidad (Pa)
                 "G": 77e9,   # Módulo de corte (Pa)
-                "rho": 7850  # Densidad (kg/m³)
+                "rho": 7850*1.15  # Densidad (kg/m³)
             },
             "ASTM-A36+": {
-                "E": 200e9,
-                "G": 77e9,
-                "rho": 7850
+                "E": 200e9*0.85,
+                "G": 77e9*0.85,
+                "rho": 7850*1.15
             },
             "ASTM-A36_modificado": {
-                "E": 200e9 * 1.1,
-                "G": 77e9,
-                "rho": 7850,
+                "E": 200e9 * 0.85,
+                "G": 77e9*0.85,
+                "rho": 7850*1.15,
             },
             "MOTOR_LINK": {
                 "E": 200e9 * 1000,  # Rigidez muy alta
@@ -135,7 +135,7 @@ def get_structure_data():
             (154, 2135, 500, 220), (155, 0, 570, 0), (156, 305, 570, 0),
             (157, 610, 570, 0), (158, 915, 570, 0), (159, 1220, 570, 0),
             (160, 1525, 570, 0), (161, 1830, 570, 0), (162, 2135, 570, 0),
-            (163, 1067.5, 250, 80), (164, 1067.5, 350, 80)
+            (163, 1067.5, 250, 80), (164, 1067.5, 290, 80)
         ],
         "elements": [
             # (nodo_inicial, nodo_final, sección, material)
@@ -314,27 +314,61 @@ def get_structure_data():
             (163, 164, "H420x180", "MOTOR_LINK"),
         ],
         "constraints": {
+            # --- Apoyos de la estructura ---
+            # Apoyo fijo (permite rotación en Y)
             1: ["ux", "uy", "uz", "rx", "rz"],
             82: ["ux", "uy", "uz", "rx", "rz"],
+            # Apoyo deslizante (restringe en Y y Z)
             71: ["uy", "uz"],
             152: ["uy", "uz"],
+
+            # --- Uniones internas (liberación de momento) ---
+            # Simula una unión de pasador que permite rotación libre en Y
+            # y no restringe la traslación del nodo.
+
+            # 11: ['ux', 'rx', 'rz'],
+            # 13: ['ux', 'rx', 'rz'],
+            # 21: ['ux', 'rx', 'ry', 'rz'],
+            23: ['ux', 'rx', 'rz'],
+            # 31: ['ux', 'rx', 'rz'],
+            # 33: ['ux', 'rx', 'rz'],
+            # 41: ['ux', 'rx', 'rz'],
+            # 43: ['ux', 'rx', 'rz'],
+            # 51: ['ux', 'rx', 'ry', 'rz'],
+            53: ['ux', 'rx', 'rz'],
+            # 61: ['ux', 'rx', 'rz'],
+            # 63: ['ux', 'rx', 'rz'],
+
+
+            # 92: ['ux', 'rx', 'rz'],
+            # 94: ['ux', 'rx', 'rz'],
+            # 102: ['ux', 'rx', 'ry', 'rz'],
+            104: ['ux', 'rx', 'rz'],
+            # 112: ['ux', 'rx', 'rz'],
+            # 114: ['ux', 'rx', 'rz'],
+            # 122: ['ux', 'rx', 'rz'],
+            # 124: ['ux', 'rx', 'rz'],
+            # 132: ['ux', 'rx', 'ry', 'rz'],
+            134: ['ux', 'rx', 'rz'],
+            # 142: ['ux', 'rx', 'rz'],
+            # 144: ['ux', 'rx', 'rz'],
         },
         "masses": {
             "node_id": 164,
-            "mass": 10.0
+            "mass": 17.0
         },
         "analysis_settings": {
             "modal_analysis": {
                 "num_modes": 30
             },
             "damping": {
-                "zeta_target": 0.02,
-                "rayleigh_modes": [1, 3]  # Usar modos 1 y 3
+                "zeta_target": 0.075,
+                "rayleigh_modes": [1, 6]  # Usar modos 1 y 3
             },
             "frequency_response": {
-                "freq_range_hz": [60],  # [15, 20, 26, 30, 40],
+                "freq_range_hz": [54, 84, 120],  # [20, 26, 40],
                 "unbalanced_force": {
-                    "mass": 0.026,              # kg
+                    "mass": 0.029,              # kg
                     "eccentricity_mm": 50.8   # mm
                 }
             },

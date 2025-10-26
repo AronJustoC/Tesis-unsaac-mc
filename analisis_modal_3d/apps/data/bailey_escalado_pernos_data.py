@@ -2,6 +2,7 @@
 Módulo para proporcionar los datos de entrada de una estructura de puente Bailey escalado con pernos.
 """
 
+
 def get_structure_data():
     """
     Retorna un diccionario con todos los datos de entrada para la estructura.
@@ -564,7 +565,7 @@ def get_structure_data():
         "static_loads": [
             {
                 "node_id": 164,
-                "force": [0, 0,-10000, 0, 0, 0]
+                "force": [0, 0, -10000, 0, 0, 0]
             }
         ],
         "analysis_settings": {
@@ -576,7 +577,7 @@ def get_structure_data():
                 "rayleigh_modes": [1, 3]  # Usar modos 1 y 3
             },
             "frequency_response": {
-                "freq_range_hz": [15, 20, 26, 30, 40],
+                "freq_range_hz": [61, 82, 110,],
                 "unbalanced_force": {
                     "mass": 0.1,              # kg
                     "eccentricity_mm": 50.8   # mm
@@ -584,7 +585,7 @@ def get_structure_data():
             },
             "post_processing": {
                 "nodes_of_interest": [
-                    21, 23, 31, 33, 41, 43, 51, 53, 
+                    21, 23, 31, 33, 41, 43, 51, 53,
                     102, 104, 112, 114, 122, 124, 132, 134
                 ],
                 "num_modes_to_plot": 5,

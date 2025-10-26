@@ -6,10 +6,12 @@ from pathlib import Path
 from analisis_modal_3d.apps.model_builder import build_structure_from_data
 from analisis_modal_3d.analysis.assembler import assemble_global_matrices
 from analisis_modal_3d.analysis.modal import modal_analysis
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
 from analisis_modal_3d.visualization.results_processor import (
     print_modal_results,
     visualize_mode_shapes
 )
+
 
 def load_data_from_file(data_file_path):
     """
@@ -24,6 +26,7 @@ def load_data_from_file(data_file_path):
     except Exception as e:
         print(f"Error al cargar el archivo de datos '{data_file_path}': {e}")
         sys.exit(1)
+
 
 def run(data_file_path):
     """
@@ -42,19 +45,26 @@ def run(data_file_path):
     print("\nIniciando análisis modal...")
     try:
         num_modes = settings['modal_analysis']['num_modes']
-        freqs, modes, mass_participation = modal_analysis(K, M, structure, num_modes=num_modes)
-        
+        freqs, modes, mass_participation = modal_analysis(
+            K, M, structure, num_modes=num_modes)
+
+        # Mostrar estructura
+        plot_structure_with_info(structure)
         # 4. MOSTRAR RESULTADOS
-        visualize_mode_shapes(structure, freqs, modes, num_modes_to_plot=settings['post_processing']['num_modes_to_plot'])
+        visualize_mode_shapes(
+            structure, freqs, modes, num_modes_to_plot=settings['post_processing']['num_modes_to_plot'])
     except Exception as e:
         print(f"Error crítico durante el análisis modal: {e}")
         return
 
+
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run modal analysis workflow.")
-    parser.add_argument("data_file", type=str, help="Path to the data file (e.g., bailey_bridge_data.py).")
+    parser = argparse.ArgumentParser(
+        description="Run modal analysis workflow.")
+    parser.add_argument("data_file", type=str,
+                        help="Path to the data file (e.g., bailey_bridge_data.py).")
     args = parser.parse_args()
 
     run(args.data_file)

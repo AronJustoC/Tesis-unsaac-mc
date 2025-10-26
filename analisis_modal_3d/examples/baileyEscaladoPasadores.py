@@ -1,0 +1,726 @@
+import os
+import sys
+import multiprocessing
+
+from analisis_modal_3d.analysis.modal import modal_analysis
+from analisis_modal_3d.structures.structure import Structure
+from analisis_modal_3d.analysis.assembler import assemble_global_matrices
+from analisis_modal_3d.visualization.plotter import plot_mode_shape, animate_mode_shape
+from analisis_modal_3d.visualization.structure_plotter import plot_structure_with_info
+
+# Global variables to store results
+structure = None
+freqs = None
+modes = None
+harmonic_displacement_history = None # Not used in this example, but kept for consistency
+
+def run_example():
+    global structure, freqs, modes, harmonic_displacement_history
+
+    structure = Structure()
+
+    # ========== Definir propiedades de materiales ==========
+    materials = {
+        "ASTM-A36": {
+            "E": 200e9,  # Módulo de elasticidad (Pa)
+            "G": 77e9,  # Módulo de corte (Pa)
+            "rho": 7950 #7850,  # Densidad (kg/m³)
+        },
+        "ASTM-A36+": {
+            "E": 200e9,  # Módulo de elasticidad (Pa)
+            "G": 77e9,  # Módulo de corte (Pa)
+            "rho": 7850# * 7.13,  # Densidad (kg/m³)
+        },
+        "ASTM-A36_modificado": {
+            "E": 200e9*1,
+            "G": 77e9,
+            "rho": 7950,
+        },
+    }
+
+    # ========== Definir propiedades de secciones escala real ==========
+    sections = {
+        "80x40": {
+            "area": (0.008 * 0.004),  # 32 mm²
+            "Ix": 2133333.34e-12 / 10000,  # Torsion constant
+            "Iy": 426666.67e-12 / 10000,  # Moment of inertia about y-axis
+            "Iz": 1706666.67e-12 / 10000,  # Moment of inertia about z-axis
+        },
+        "100x80": {
+            "area": (0.010 * 0.008),  # 80 mm²
+            "Ix": (10933333.34e-12 / 10000),  # Torsion constant
+            "Iy": (6666666.67e-12 / 10000),  # Moment of inertia about y-axis
+            "Iz": (4266666.67e-12 / 10000),  # Moment of inertia about z-axis
+        },
+        "80x80": {
+            "area": (0.008 * 0.008),  # 64 mm²
+            "Ix": (6826666.66e-12 / 10000),  # Torsion constant
+            "Iy": (3413333.33e-12 / 10000),  # Moment of inertia about y-axis
+            "Iz": (3413333.33e-12 / 10000),  # Moment of inertia about z-axis
+        },
+        "H420x180": {  # H-section
+            "area": (0.042 * 0.002 + 2 * 0.018 * 0.002),  # Web + 2 Flanges
+            "Ix": (399386666.66e-12 / 10000),  # Torsion constant
+            "Iy": (379693333.33e-12 / 10000),  # Major axis moment of inertia
+            "Iz": (19693333.33e-12 / 10000),  # Minor axis moment of inertia
+        },
+    }
+
+    # ========== Agregar nodos ==========
+    node_coords = {}
+    for row in [
+        # ID: (x, y, z) en metros (convertidos de mm)
+        (1, 0, 0, 0),
+        (2, 0, 0, 110),
+        (3, 0, 0, 220),
+        (4, 76.25, 0, 0),
+        (5, 76.25, 0, 220),
+        (6, 152.5, 0, 0),
+        (7, 152.5, 0, 110),
+        (8, 152.5, 0, 220),
+        (9, 228.75, 0, 0),
+        (10, 228.75, 0, 220),
+        (11, 305, 0, 0),
+        (12, 305, 0, 110),
+        (13, 305, 0, 220),
+        (14, 381.25, 0, 0),
+        (15, 381.25, 0, 220),
+        (16, 457.5, 0, 0),
+        (17, 457.5, 0, 110),
+        (18, 457.5, 0, 220),
+        (19, 533.75, 0, 0),
+        (20, 533.75, 0, 220),
+        (21, 610, 0, 0),
+        (22, 610, 0, 110),
+        (23, 610, 0, 220),
+        (24, 686.25, 0, 0),
+        (25, 686.25, 0, 220),
+        (26, 762.5, 0, 0),
+        (27, 762.5, 0, 110),
+        (28, 762.5, 0, 220),
+        (29, 838.75, 0, 0),
+        (30, 838.75, 0, 220),
+        (31, 915, 0, 0),
+        (32, 915, 0, 110),
+        (33, 915, 0, 220),
+        (34, 991.25, 0, 0),
+        (35, 991.25, 0, 220),
+        (36, 1067.5, 0, 0),
+        (37, 1067.5, 0, 110),
+        (38, 1067.5, 0, 220),
+        (39, 1143.75, 0, 0),
+        (40, 1143.75, 0, 220),
+        (41, 1220, 0, 0),
+        (42, 1220, 0, 110),
+        (43, 1220, 0, 220),
+        (44, 1296.25, 0, 0),
+        (45, 1296.25, 0, 220),
+        (46, 1372.5, 0, 0),
+        (47, 1372.5, 0, 110),
+        (48, 1372.5, 0, 220),
+        (49, 1448.75, 0, 0),
+        (50, 1448.75, 0, 220),
+        (51, 1525, 0, 0),
+        (52, 1525, 0, 110),
+        (53, 1525, 0, 220),
+        (54, 1601.25, 0, 0),
+        (55, 1601.25, 0, 220),
+        (56, 1677.5, 0, 0),
+        (57, 1677.5, 0, 110),
+        (58, 1677.5, 0, 220),
+        (59, 1753.75, 0, 0),
+        (60, 1753.75, 0, 220),
+        (61, 1830, 0, 0),
+        (62, 1830, 0, 110),
+        (63, 1830, 0, 220),
+        (64, 1906.25, 0, 0),
+        (65, 1906.25, 0, 220),
+        (66, 1982.5, 0, 0),
+        (67, 1982.5, 0, 110),
+        (68, 1982.5, 0, 220),
+        (69, 2058.75, 0, 0),
+        (70, 2058.75, 0, 220),
+        (71, 2135, 0, 0),
+        (72, 2135, 0, 110),
+        (73, 2135, 0, 220),
+        (74, 0, -70, 0),
+        (75, 305, -70, 0),
+        (76, 610, -70, 0),
+        (77, 915, -70, 0),
+        (78, 1220, -70, 0),
+        (79, 1525, -70, 0),
+        (80, 1830, -70, 0),
+        (81, 2135, -70, 0),
+        (82, 0, 500, 0),
+        (83, 0, 500, 110),
+        (84, 0, 500, 220),
+        (85, 76.25, 500, 0),
+        (86, 76.25, 500, 220),
+        (87, 152.5, 500, 0),
+        (88, 152.5, 500, 110),
+        (89, 152.5, 500, 220),
+        (90, 228.75, 500, 0),
+        (91, 228.75, 500, 220),
+        (92, 305, 500, 0),
+        (93, 305, 500, 110),
+        (94, 305, 500, 220),
+        (95, 381.25, 500, 0),
+        (96, 381.25, 500, 220),
+        (97, 457.5, 500, 0),
+        (98, 457.5, 500, 110),
+        (99, 457.5, 500, 220),
+        (100, 533.75, 500, 0),
+        (101, 533.75, 500, 220),
+        (102, 610, 500, 0),
+        (103, 610, 500, 110),
+        (104, 610, 500, 220),
+        (105, 686.25, 500, 0),
+        (106, 686.25, 500, 220),
+        (107, 762.5, 500, 0),
+        (108, 762.5, 500, 110),
+        (109, 762.5, 500, 220),
+        (110, 838.75, 500, 0),
+        (111, 838.75, 500, 220),
+        (112, 915, 500, 0),
+        (113, 915, 500, 110),
+        (114, 915, 500, 220),
+        (115, 991.25, 500, 0),
+        (116, 991.25, 500, 220),
+        (117, 1067.5, 500, 0),
+        (118, 1067.5, 500, 110),
+        (119, 1067.5, 500, 220),
+        (120, 1143.75, 500, 0),
+        (121, 1143.75, 500, 220),
+        (122, 1220, 500, 0),
+        (123, 1220, 500, 110),
+        (124, 1220, 500, 220),
+        (125, 1296.25, 500, 0),
+        (126, 1296.25, 500, 220),
+        (127, 1372.5, 500, 0),
+        (128, 1372.5, 500, 110),
+        (129, 1372.5, 500, 220),
+        (130, 1448.75, 500, 0),
+        (131, 1448.75, 500, 220),
+        (132, 1525, 500, 0),
+        (133, 1525, 500, 110),
+        (134, 1525, 500, 220),
+        (135, 1601.25, 500, 0),
+        (136, 1601.25, 500, 220),
+        (137, 1677.5, 500, 0),
+        (138, 1677.5, 500, 110),
+        (139, 1677.5, 500, 220),
+        (140, 1753.75, 500, 0),
+        (141, 1753.75, 500, 220),
+        (142, 1830, 500, 0),
+        (143, 1830, 500, 110),
+        (144, 1830, 500, 220),
+        (145, 1906.25, 500, 0),
+        (146, 1906.25, 500, 220),
+        (147, 1982.5, 500, 0),
+        (148, 1982.5, 500, 110),
+        (149, 1982.5, 500, 220),
+        (150, 2058.75, 500, 0),
+        (151, 2058.75, 500, 220),
+        (152, 2135, 500, 0),
+        (153, 2135, 500, 110),
+        (154, 2135, 500, 220),
+        (155, 0, 570, 0),
+        (156, 305, 570, 0),
+        (157, 610, 570, 0),
+        (158, 915, 570, 0),
+        (159, 1220, 570, 0),
+        (160, 1525, 570, 0),
+        (161, 1830, 570, 0),
+        (162, 2135, 570, 0),
+    ]:
+        node_id = row[0]
+        coords = (row[1] / 1000, row[2] / 1000, row[3] / 1000)  # Conversión mm -> m
+        node_coords[node_id] = structure.add_node(*coords)
+
+    # Asignación de masa puntual a nodos específicos
+    mass_nodes_ids = [31, 36, 41, 112, 117, 122]
+    total_mass = 10.0
+    mass_per_node = total_mass / len(mass_nodes_ids)
+
+    for node_id in mass_nodes_ids:
+        if node_id in node_coords:
+            node = node_coords[node_id]
+            node.mass += mass_per_node
+            print(f"Añadida masa de {mass_per_node:.4f} kg al nodo {node.id}")
+        else:
+            print(f"Advertencia: Nodo con ID {node_id} no encontrado en la estructura.")
+
+    # ========== Agregar elementos ==========
+    elements = [
+        # (nodo_inicial, nodo_final, sección, material)
+        (1, 2, "80x40", "ASTM-A36"),
+        (2, 3, "80x40", "ASTM-A36"),
+        (1, 4, "100x80", "ASTM-A36"),
+        (2, 4, "80x40", "ASTM-A36"),
+        (2, 5, "80x40", "ASTM-A36"),
+        (3, 5, "100x80", "ASTM-A36"),
+        (4, 6, "100x80", "ASTM-A36"),
+        (4, 7, "80x40", "ASTM-A36"),
+        (5, 7, "80x40", "ASTM-A36"),
+        (5, 8, "100x80", "ASTM-A36"),
+        (6, 7, "80x40", "ASTM-A36"),
+        (7, 8, "80x40", "ASTM-A36"),
+        (6, 9, "100x80", "ASTM-A36"),
+        (7, 9, "80x40", "ASTM-A36"),
+        (7, 10, "80x40", "ASTM-A36"),
+        (8, 10, "100x80", "ASTM-A36"),
+        (9, 11, "100x80", "ASTM-A36"),
+        (9, 12, "80x40", "ASTM-A36"),
+        (10, 12, "80x40", "ASTM-A36"),
+        (10, 13, "100x80", "ASTM-A36"),
+        (11, 12, "80x80", "ASTM-A36"),
+        (12, 13, "80x80", "ASTM-A36"),
+        (11, 14, "100x80", "ASTM-A36"),
+        (12, 14, "80x40", "ASTM-A36"),
+        (12, 15, "80x40", "ASTM-A36"),
+        (13, 15, "100x80", "ASTM-A36"),
+        (14, 16, "100x80", "ASTM-A36"),
+        (14, 17, "80x40", "ASTM-A36"),
+        (15, 17, "80x40", "ASTM-A36"),
+        (15, 18, "100x80", "ASTM-A36"),
+        (16, 17, "80x40", "ASTM-A36"),
+        (17, 18, "80x40", "ASTM-A36"),
+        (16, 19, "100x80", "ASTM-A36"),
+        (17, 19, "80x40", "ASTM-A36"),
+        (17, 20, "80x40", "ASTM-A36"),
+        (18, 20, "100x80", "ASTM-A36"),
+        (19, 21, "100x80", "ASTM-A36"),
+        (19, 22, "80x40", "ASTM-A36"),
+        (20, 22, "80x40", "ASTM-A36"),
+        (20, 23, "100x80", "ASTM-A36"),
+        (21, 22, "80x80", "ASTM-A36"),
+        (22, 23, "80x80", "ASTM-A36"),
+        (21, 24, "100x80", "ASTM-A36"),
+        (22, 24, "80x40", "ASTM-A36"),
+        (22, 25, "80x40", "ASTM-A36"),
+        (23, 25, "100x80", "ASTM-A36"),
+        (24, 26, "100x80", "ASTM-A36"),
+        (24, 27, "80x40", "ASTM-A36"),
+        (25, 27, "80x40", "ASTM-A36"),
+        (25, 28, "100x80", "ASTM-A36"),
+        (26, 27, "80x40", "ASTM-A36"),
+        (27, 28, "80x40", "ASTM-A36"),
+        (26, 29, "100x80", "ASTM-A36"),
+        (27, 29, "80x40", "ASTM-A36"),
+        (27, 30, "80x40", "ASTM-A36"),
+        (28, 30, "100x80", "ASTM-A36"),
+        (29, 31, "100x80", "ASTM-A36"),
+        (29, 32, "80x40", "ASTM-A36"),
+        (30, 32, "80x40", "ASTM-A36"),
+        (30, 33, "100x80", "ASTM-A36"),
+        (31, 32, "80x80", "ASTM-A36"),
+        (32, 33, "80x80", "ASTM-A36"),
+        (31, 34, "100x80", "ASTM-A36"),
+        (32, 34, "80x40", "ASTM-A36"),
+        (32, 35, "80x40", "ASTM-A36"),
+        (33, 35, "100x80", "ASTM-A36"),
+        (34, 36, "100x80", "ASTM-A36"),
+        (34, 37, "80x40", "ASTM-A36"),
+        (35, 37, "80x40", "ASTM-A36"),
+        (35, 38, "100x80", "ASTM-A36"),
+        (36, 37, "80x40", "ASTM-A36"),
+        (37, 38, "80x40", "ASTM-A36"),
+        (36, 39, "100x80", "ASTM-A36"),
+        (37, 39, "80x40", "ASTM-A36"),
+        (37, 40, "80x40", "ASTM-A36"),
+        (38, 40, "100x80", "ASTM-A36"),
+        (39, 41, "100x80", "ASTM-A36"),
+        (39, 42, "80x40", "ASTM-A36"),
+        (40, 42, "80x40", "ASTM-A36"),
+        (40, 43, "100x80", "ASTM-A36"),
+        (41, 42, "80x80", "ASTM-A36"),
+        (42, 43, "80x80", "ASTM-A36"),
+        (41, 44, "100x80", "ASTM-A36"),
+        (42, 44, "80x40", "ASTM-A36"),
+        (42, 45, "80x40", "ASTM-A36"),
+        (43, 45, "100x80", "ASTM-A36"),
+        (44, 46, "100x80", "ASTM-A36"),
+        (44, 47, "80x40", "ASTM-A36"),
+        (45, 47, "80x40", "ASTM-A36"),
+        (45, 48, "100x80", "ASTM-A36"),
+        (46, 47, "80x40", "ASTM-A36"),
+        (47, 48, "80x40", "ASTM-A36"),
+        (46, 49, "100x80", "ASTM-A36"),
+        (47, 49, "80x40", "ASTM-A36"),
+        (47, 50, "80x40", "ASTM-A36"),
+        (48, 50, "100x80", "ASTM-A36"),
+        (49, 51, "100x80", "ASTM-A36"),
+        (49, 52, "80x40", "ASTM-A36"),
+        (50, 52, "80x40", "ASTM-A36"),
+        (50, 53, "100x80", "ASTM-A36"),
+        (51, 52, "80x80", "ASTM-A36"),
+        (52, 53, "80x80", "ASTM-A36"),
+        (51, 54, "100x80", "ASTM-A36"),
+        (52, 54, "80x40", "ASTM-A36"),
+        (52, 55, "80x40", "ASTM-A36"),
+        (53, 55, "100x80", "ASTM-A36"),
+        (54, 56, "100x80", "ASTM-A36"),
+        (54, 57, "80x40", "ASTM-A36"),
+        (55, 57, "80x40", "ASTM-A36"),
+        (55, 58, "100x80", "ASTM-A36"),
+        (56, 57, "80x40", "ASTM-A36"),
+        (57, 58, "80x40", "ASTM-A36"),
+        (56, 59, "100x80", "ASTM-A36"),
+        (57, 59, "80x40", "ASTM-A36"),
+        (57, 60, "80x40", "ASTM-A36"),
+        (58, 60, "100x80", "ASTM-A36"),
+        (59, 61, "100x80", "ASTM-A36"),
+        (59, 62, "80x40", "ASTM-A36"),
+        (60, 62, "80x40", "ASTM-A36"),
+        (60, 63, "100x80", "ASTM-A36"),
+        (61, 62, "80x80", "ASTM-A36"),
+        (62, 63, "80x80", "ASTM-A36"),
+        (61, 64, "100x80", "ASTM-A36"),
+        (62, 64, "80x40", "ASTM-A36"),
+        (62, 65, "80x40", "ASTM-A36"),
+        (63, 65, "100x80", "ASTM-A36"),
+        (64, 66, "100x80", "ASTM-A36"),
+        (64, 67, "80x40", "ASTM-A36"),
+        (65, 67, "80x40", "ASTM-A36"),
+        (65, 68, "100x80", "ASTM-A36"),
+        (66, 67, "80x40", "ASTM-A36"),
+        (67, 68, "80x40", "ASTM-A36"),
+        (66, 69, "100x80", "ASTM-A36"),
+        (67, 69, "80x40", "ASTM-A36"),
+        (67, 70, "80x40", "ASTM-A36"),
+        (68, 70, "100x80", "ASTM-A36"),
+        (69, 71, "100x80", "ASTM-A36"),
+        (69, 72, "80x40", "ASTM-A36"),
+        (70, 72, "80x40", "ASTM-A36"),
+        (70, 73, "100x80", "ASTM-A36"),
+        (71, 72, "80x40", "ASTM-A36"),
+        (72, 73, "80x40", "ASTM-A36"),
+        (1, 74, "H420x180", "ASTM-A36"),
+        (74, 3, "80x40", "ASTM-A36"),
+        (11, 75, "H420x180", "ASTM-A36"),
+        (75, 13, "80x40", "ASTM-A36"),
+        (21, 76, "H420x180", "ASTM-A36"),
+        (76, 23, "80x40", "ASTM-A36"),
+        (31, 77, "H420x180", "ASTM-A36"),
+        (77, 33, "80x40", "ASTM-A36"),
+        (41, 78, "H420x180", "ASTM-A36"),
+        (78, 43, "80x40", "ASTM-A36"),
+        (51, 79, "H420x180", "ASTM-A36"),
+        (79, 53, "80x40", "ASTM-A36"),
+        (61, 80, "H420x180", "ASTM-A36"),
+        (80, 63, "80x40", "ASTM-A36"),
+        (71, 81, "H420x180", "ASTM-A36"),
+        (81, 73, "80x40", "ASTM-A36"),
+        (82, 83, "80x40", "ASTM-A36"),
+        (83, 84, "80x40", "ASTM-A36"),
+        (82, 85, "100x80", "ASTM-A36"),
+        (83, 85, "80x40", "ASTM-A36"),
+        (83, 86, "80x40", "ASTM-A36"),
+        (84, 86, "100x80", "ASTM-A36"),
+        (85, 87, "100x80", "ASTM-A36"),
+        (85, 88, "80x40", "ASTM-A36"),
+        (86, 88, "80x40", "ASTM-A36"),
+        (86, 89, "100x80", "ASTM-A36"),
+        (87, 88, "80x40", "ASTM-A36"),
+        (88, 89, "80x40", "ASTM-A36"),
+        (87, 90, "100x80", "ASTM-A36"),
+        (88, 90, "80x40", "ASTM-A36"),
+        (88, 91, "80x40", "ASTM-A36"),
+        (89, 91, "100x80", "ASTM-A36"),
+        (90, 92, "100x80", "ASTM-A36"),
+        (90, 93, "80x40", "ASTM-A36"),
+        (91, 93, "80x40", "ASTM-A36"),
+        (91, 94, "100x80", "ASTM-A36"),
+        (92, 93, "80x80", "ASTM-A36"),
+        (93, 94, "80x80", "ASTM-A36"),
+        (92, 95, "100x80", "ASTM-A36"),
+        (93, 95, "80x40", "ASTM-A36"),
+        (93, 96, "80x40", "ASTM-A36"),
+        (94, 96, "100x80", "ASTM-A36"),
+        (95, 97, "100x80", "ASTM-A36"),
+        (95, 98, "80x40", "ASTM-A36"),
+        (96, 98, "80x40", "ASTM-A36"),
+        (96, 99, "100x80", "ASTM-A36"),
+        (97, 98, "80x40", "ASTM-A36"),
+        (98, 99, "80x40", "ASTM-A36"),
+        (97, 100, "100x80", "ASTM-A36"),
+        (98, 100, "80x40", "ASTM-A36"),
+        (98, 101, "80x40", "ASTM-A36"),
+        (99, 101, "100x80", "ASTM-A36"),
+        (100, 102, "100x80", "ASTM-A36"),
+        (100, 103, "80x40", "ASTM-A36"),
+        (101, 103, "80x40", "ASTM-A36"),
+        (101, 104, "100x80", "ASTM-A36"),
+        (102, 103, "80x80", "ASTM-A36"),
+        (103, 104, "80x80", "ASTM-A36"),
+        (102, 105, "100x80", "ASTM-A36"),
+        (103, 105, "80x40", "ASTM-A36"),
+        (103, 106, "80x40", "ASTM-A36"),
+        (104, 106, "100x80", "ASTM-A36"),
+        (105, 107, "100x80", "ASTM-A36"),
+        (105, 108, "80x40", "ASTM-A36"),
+        (106, 108, "80x40", "ASTM-A36"),
+        (106, 109, "100x80", "ASTM-A36"),
+        (107, 108, "80x40", "ASTM-A36"),
+        (108, 109, "80x40", "ASTM-A36"),
+        (107, 110, "100x80", "ASTM-A36"),
+        (108, 110, "80x40", "ASTM-A36"),
+        (108, 111, "80x40", "ASTM-A36"),
+        (109, 111, "100x80", "ASTM-A36"),
+        (110, 112, "100x80", "ASTM-A36"),
+        (110, 113, "80x40", "ASTM-A36"),
+        (111, 113, "80x40", "ASTM-A36"),
+        (111, 114, "100x80", "ASTM-A36"),
+        (112, 113, "80x80", "ASTM-A36"),
+        (113, 114, "80x80", "ASTM-A36"),
+        (112, 115, "100x80", "ASTM-A36"),
+        (113, 115, "80x40", "ASTM-A36"),
+        (113, 116, "80x40", "ASTM-A36"),
+        (114, 116, "100x80", "ASTM-A36"),
+        (115, 117, "100x80", "ASTM-A36"),
+        (115, 118, "80x40", "ASTM-A36"),
+        (116, 118, "80x40", "ASTM-A36"),
+        (116, 119, "100x80", "ASTM-A36"),
+        (117, 118, "80x40", "ASTM-A36"),
+        (118, 119, "80x40", "ASTM-A36"),
+        (117, 120, "100x80", "ASTM-A36"),
+        (118, 120, "80x40", "ASTM-A36"),
+        (118, 121, "80x40", "ASTM-A36"),
+        (119, 121, "100x80", "ASTM-A36"),
+        (120, 122, "100x80", "ASTM-A36"),
+        (120, 123, "80x40", "ASTM-A36"),
+        (121, 123, "80x40", "ASTM-A36"),
+        (121, 124, "100x80", "ASTM-A36"),
+        (122, 123, "80x80", "ASTM-A36"),
+        (123, 124, "80x80", "ASTM-A36"),
+        (122, 125, "100x80", "ASTM-A36"),
+        (123, 125, "80x40", "ASTM-A36"),
+        (123, 126, "80x40", "ASTM-A36"),
+        (124, 126, "100x80", "ASTM-A36"),
+        (125, 127, "100x80", "ASTM-A36"),
+        (125, 128, "80x40", "ASTM-A36"),
+        (126, 128, "80x40", "ASTM-A36"),
+        (126, 129, "100x80", "ASTM-A36"),
+        (127, 128, "80x40", "ASTM-A36"),
+        (128, 129, "80x40", "ASTM-A36"),
+        (127, 130, "100x80", "ASTM-A36"),
+        (128, 130, "80x40", "ASTM-A36"),
+        (128, 131, "80x40", "ASTM-A36"),
+        (129, 131, "100x80", "ASTM-A36"),
+        (130, 132, "100x80", "ASTM-A36"),
+        (130, 133, "80x40", "ASTM-A36"),
+        (131, 133, "80x40", "ASTM-A36"),
+        (131, 134, "100x80", "ASTM-A36"),
+        (132, 133, "80x80", "ASTM-A36"),
+        (133, 134, "80x80", "ASTM-A36"),
+        (132, 135, "100x80", "ASTM-A36"),
+        (133, 135, "80x40", "ASTM-A36"),
+        (133, 136, "80x40", "ASTM-A36"),
+        (134, 136, "100x80", "ASTM-A36"),
+        (135, 137, "100x80", "ASTM-A36"),
+        (135, 138, "80x40", "ASTM-A36"),
+        (136, 138, "80x40", "ASTM-A36"),
+        (136, 139, "100x80", "ASTM-A36"),
+        (137, 138, "80x40", "ASTM-A36"),
+        (138, 139, "80x40", "ASTM-A36"),
+        (137, 140, "100x80", "ASTM-A36"),
+        (138, 140, "80x40", "ASTM-A36"),
+        (138, 141, "80x40", "ASTM-A36"),
+        (139, 141, "100x80", "ASTM-A36"),
+        (140, 142, "100x80", "ASTM-A36"),
+        (140, 143, "80x40", "ASTM-A36"),
+        (141, 143, "80x40", "ASTM-A36"),
+        (141, 144, "100x80", "ASTM-A36"),
+        (142, 143, "80x80", "ASTM-A36"),
+        (143, 144, "80x80", "ASTM-A36"),
+        (142, 145, "100x80", "ASTM-A36"),
+        (143, 145, "80x40", "ASTM-A36"),
+        (143, 146, "80x40", "ASTM-A36"),
+        (144, 146, "100x80", "ASTM-A36"),
+        (145, 147, "100x80", "ASTM-A36"),
+        (145, 148, "80x40", "ASTM-A36"),
+        (146, 148, "80x40", "ASTM-A36"),
+        (146, 149, "100x80", "ASTM-A36"),
+        (147, 148, "80x40", "ASTM-A36"),
+        (148, 149, "80x40", "ASTM-A36"),
+        (147, 150, "100x80", "ASTM-A36"),
+        (148, 150, "80x40", "ASTM-A36"),
+        (148, 151, "80x40", "ASTM-A36"),
+        (149, 151, "100x80", "ASTM-A36"),
+        (150, 152, "100x80", "ASTM-A36"),
+        (150, 153, "80x40", "ASTM-A36"),
+        (151, 153, "80x40", "ASTM-A36"),
+        (151, 154, "100x80", "ASTM-A36"),
+        (152, 153, "80x40", "ASTM-A36"),
+        (153, 154, "80x40", "ASTM-A36"),
+        (82, 155, "H420x180", "ASTM-A36"),
+        (155, 84, "80x40", "ASTM-A36"),
+        (92, 156, "H420x180", "ASTM-A36"),
+        (156, 94, "80x40", "ASTM-A36"),
+        (102, 157, "H420x180", "ASTM-A36"),
+        (157, 104, "80x40", "ASTM-A36"),
+        (112, 158, "H420x180", "ASTM-A36"),
+        (158, 114, "80x40", "ASTM-A36"),
+        (122, 159, "H420x180", "ASTM-A36"),
+        (159, 124, "80x40", "ASTM-A36"),
+        (132, 160, "H420x180", "ASTM-A36"),
+        (160, 134, "80x40", "ASTM-A36"),
+        (142, 161, "H420x180", "ASTM-A36"),
+        (161, 144, "80x40", "ASTM-A36"),
+        (152, 162, "H420x180", "ASTM-A36"),
+        (162, 154, "80x40", "ASTM-A36"),
+        (1, 82, "H420x180", "ASTM-A36"),
+        (1, 92, "80x40", "ASTM-A36"),
+        (11, 82, "80x40", "ASTM-A36"),
+        (11, 92, "H420x180", "ASTM-A36"),
+        (11, 102, "80x40", "ASTM-A36"),
+        (21, 92, "80x40", "ASTM-A36"),
+        (21, 102, "H420x180", "ASTM-A36"),
+        (21, 112, "80x40", "ASTM-A36"),
+        (31, 102, "80x40", "ASTM-A36+"),  # ASTM-A36+
+        (31, 112, "H420x180", "ASTM-A36"),
+        (31, 122, "80x40", "ASTM-A36"),
+        (41, 112, "80x40", "ASTM-A36"),
+        (41, 122, "H420x180", "ASTM-A36+"),  # ASTM-A36+
+        (41, 132, "80x40", "ASTM-A36"),
+        (51, 122, "80x40", "ASTM-A36"),
+        (51, 132, "H420x180", "ASTM-A36"),
+        (51, 142, "80x40", "ASTM-A36"),
+        (61, 132, "80x40", "ASTM-A36"),
+        (61, 142, "H420x180", "ASTM-A36"),
+        (61, 152, "80x40", "ASTM-A36"),
+        (71, 142, "80x40", "ASTM-A36"),
+        (71, 152, "H420x180", "ASTM-A36"),
+    ]
+
+    for el in elements:
+        node1 = node_coords[el[0]]
+        node2 = node_coords[el[1]]
+        section_name = el[2]
+        material_name = el[3]
+
+        # Check if the element is horizontal (same Y coordinate) and not a "viga h"
+        if node1.y == node2.y and section_name != "H420x180":
+            material_name = "ASTM-A36_modificado"
+
+        structure.add_element(
+            node1, node2, sections[section_name], materials[material_name]
+        )
+
+    # ========== Aplicar restricciones ==========
+    constraints = {
+        # Apoyos
+        #1: ["ux", "uy", "uz", "rx", "rz"],
+        #82: ["ux", "uy", "uz", "rx", "rz"],
+          1: ["ux", "uy", "uz", "rx", "rz"],
+        82: ["ux", "uy", "uz", "rx", "rz"],
+        71: ["uy", "uz"],
+        152: ["uy","uz"],
+          }
+
+    for node_id, dofs in constraints.items():
+        structure.add_constraint(node_coords[node_id], dofs)
+
+
+    # Plot the structure with info
+    plot_structure_with_info(structure, title="Estructura Bailey Escalado con Pasadores")
+
+    # ========== Análisis Modal con parámetros robustos ==========
+    try:
+        K, M = assemble_global_matrices(structure)
+        # Usar shift-invert para evitar matrices singulares
+        freqs, modes = modal_analysis(
+            K,
+            M,
+            structure,
+            num_modes=30,
+        )
+        print("\nFrequencias Naturales:")
+        print("-" * 15)
+        for i, freq in enumerate(freqs, 1):
+            print(f"Mode {i}: {freq:.2f} Hz")
+
+        # Preguntar al usuario cuántos modos visualizar
+        while True:
+            try:
+                num_modes_to_plot_str = input(f"\nIngrese el número de modos a visualizar (1-{len(freqs)}) o 't' para todos: ")
+                if num_modes_to_plot_str.lower() == 't':
+                    num_modes_to_plot = len(freqs)
+                    break
+                num_modes_to_plot = int(num_modes_to_plot_str)
+                if 1 <= num_modes_to_plot <= len(freqs):
+                    break
+                else:
+                    print("Número de modos inválido. Intente de nuevo.")
+            except ValueError:
+                print("Entrada inválida. Por favor, ingrese un número o 't'.")
+
+        # Preguntar por el factor de escala de deformación
+        while True:
+            try:
+                deformation_scale = float(input("Ingrese el factor de escala de deformación (e.g., 0.1): "))
+                break
+            except ValueError:
+                print("Entrada inválida. Por favor, ingrese un número decimal.")
+
+        # --- Visualización de Modos en Procesos Separados ---
+        plot_processes = []
+        print("\nLanzando ventanas de visualización de modos. Cierre cada ventana para continuar.")
+
+        for i in range(num_modes_to_plot):
+            title = f"Modo {i + 1} - {freqs[i]:.2f} Hz"
+            # Crear un proceso para cada ventana de ploteo
+            plot_process = multiprocessing.Process(
+                target=plot_mode_shape,
+                args=(structure, modes[:, i]),
+                kwargs={"title": title, "deformation_scale": deformation_scale}
+            )
+            plot_processes.append(plot_process)
+            plot_process.start()
+
+        # Esperar a que todos los procesos de ploteo terminen (ventanas cerradas)
+        for p in plot_processes:
+            p.join()
+
+        # Preguntar si desea generar un GIF de un modo
+        while True:
+            generate_gif_choice = input("\n¿Desea generar un GIF de un modo de vibración? (s/n): ").lower()
+            if generate_gif_choice == 's':
+                while True:
+                    try:
+                        gif_mode_index = int(input(f"Ingrese el número del modo para el GIF (1-{len(freqs)}): ")) - 1
+                        if 0 <= gif_mode_index < len(freqs):
+                            break
+                        else:
+                            print("Número de modo inválido. Intente de nuevo.")
+                    except ValueError:
+                        print("Entrada inválida. Por favor, ingrese un número.")
+
+                while True:
+                    try:
+                        gif_deformation_scale = float(input("Ingrese el factor de escala de deformación para el GIF (e.g., 0.1): "))
+                        break
+                    except ValueError:
+                        print("Entrada inválida. Por favor, ingrese un número decimal.")
+
+                gif_output_filename = input("Ingrese el nombre del archivo GIF de salida (ej. modo_1.gif): ")
+                
+                print(f"Generando GIF para el modo {gif_mode_index + 1}...")
+                animate_mode_shape(
+                    structure=structure,
+                    mode_vector=modes[:, gif_mode_index],
+                    deformation_scale=gif_deformation_scale,
+                    title=f"Modo {gif_mode_index + 1} - {freqs[gif_mode_index]:.2f} Hz",
+                    filename=gif_output_filename
+                )
+                print(f"GIF guardado en: {gif_output_filename}")
+            elif generate_gif_choice == 'n':
+                break
+            else:
+                print("Opción inválida. Por favor, ingrese 's' o 'n'.")
+
+    except Exception as e:
+        print(f"Error en el análisis: {str(e)}")
+
+# Call run_example directly when the module is imported
+run_example()
